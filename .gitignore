@@ -1,0 +1,25 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Secretos y configuración local (nunca al repo)
+.env
+.env.*
+!.env.example
+
+# Claves y credenciales: cualquier JSON se ignora salvo los datos de ejemplo
+*.json
+!data/samples/**/*.json
+
+# Datos personales reales (CV, ofertas, salarios)
+data/private/
+
+# macOS
+.DS_Store

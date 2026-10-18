@@ -1,0 +1,62 @@
+{
+  "personal": {
+    "name": "Marta Ejemplo Ruiz",
+    "email": "marta.ejemplo@example.com",
+    "phone": "+34 600 000 000",
+    "location": "Barcelona, España",
+    "links": {
+      "github": "https://github.com/example-user",
+      "linkedin": "https://www.linkedin.com/in/example-user"
+    }
+  },
+  "summary": "Ingeniera junior de datos e IA con experiencia en pipelines en Python y despliegue de modelos en la nube. Busca un primer puesto donde crecer en MLOps.",
+  "experience": [
+    {
+      "company": "Datos del Norte S.L.",
+      "title": "Junior Data Engineer",
+      "location": "Barcelona, España",
+      "start": "2025-02",
+      "end": null,
+      "achievements": [
+        "Construí un pipeline de ingesta diaria en Python que redujo de 3 horas a 20 minutos la carga de datos de ventas.",
+        "Migré tres informes de Excel a BigQuery y Looker Studio, usados cada semana por el equipo comercial.",
+        "Añadí tests con pytest al 80 % del código del pipeline."
+      ]
+    },
+    {
+      "company": "Laboratorio Cuántico Ficticio",
+      "title": "Becaria de investigación en IA",
+      "location": "Remoto",
+      "start": "2024-06",
+      "end": "2024-12",
+      "achievements": [
+        "Entrené y evalué un clasificador de texto con scikit-learn y PyTorch, con un F1 del 0,86.",
+        "Documenté los experimentos para que otro compañero pudiera reproducirlos."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "institution": "Universidad Imaginaria de Cataluña",
+      "degree": "Grado en Inteligencia Artificial",
+      "start": "2021-09",
+      "end": "2025-06"
+    }
+  ],
+  "skills": [
+    { "name": "Python", "level": "advanced", "years": 4 },
+    { "name": "SQL", "level": "intermediate", "years": 2 },
+    { "name": "PyTorch", "level": "intermediate", "years": 1 },
+    { "name": "scikit-learn", "level": "intermediate", "years": 2 },
+    { "name": "FastAPI", "level": "intermediate", "years": 1 },
+    { "name": "BigQuery", "level": "intermediate", "years": 1 },
+    { "name": "Google Cloud Platform", "level": "beginner", "years": 1 },
+    { "name": "Docker", "level": "beginner", "years": 1 },
+    { "name": "Git", "level": "advanced", "years": 4 }
+  ],
+  "languages": [
+    { "name": "Español", "level": "native" },
+    { "name": "Catalán", "level": "native" },
+    { "name": "Inglés", "level": "C1" }
+  ]
+}

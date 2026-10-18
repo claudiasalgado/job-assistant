@@ -1,0 +1,37 @@
+version = 1
+revision = 5
+requires-python = ">=3.12"
+
+[manifest]
+members = [
+    "api",
+    "core",
+    "worker",
+]
+
+[[package]]
+name = "api"
+version = "0.1.0"
+source = { editable = "services/api" }
+dependencies = [
+    { name = "core" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "core", editable = "packages/core" }]
+
+[[package]]
+name = "core"
+version = "0.1.0"
+source = { editable = "packages/core" }
+
+[[package]]
+name = "worker"
+version = "0.1.0"
+source = { editable = "services/worker" }
+dependencies = [
+    { name = "core" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "core", editable = "packages/core" }]

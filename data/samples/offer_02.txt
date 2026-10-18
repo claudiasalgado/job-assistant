@@ -1,0 +1,38 @@
+MLOps Engineer
+
+Orbita Labs — Remote (EU time zones, occasional travel to Lisbon)
+
+About us
+Orbita Labs builds forecasting products for energy companies. We are a team of 25, fully remote, shipping models to production every week. We care about boring, reliable infrastructure more than shiny demos.
+
+The role
+We are looking for an MLOps Engineer to own how our models get trained, deployed and monitored. You will work closely with our data scientists and report to the Head of Platform. This is a hands-on role, and you will be one of the first two people in the team.
+
+What you'll do
+- Design and maintain training and deployment pipelines for ML models.
+- Run our services on Kubernetes and keep them cheap and reliable.
+- Define infrastructure as code with Terraform.
+- Set up monitoring, alerting and drift detection for models in production.
+- Orchestrate batch jobs with Airflow.
+- Improve CI/CD so that a model goes from notebook to production safely.
+
+What we're looking for
+- 3+ years of experience in MLOps, DevOps or backend engineering, with at least 1 year working with ML models in production.
+- Strong Python.
+- Hands-on experience with Docker and Kubernetes.
+- Experience with Terraform or a similar IaC tool.
+- Familiarity with a major cloud provider (we use GCP).
+- Experience with CI/CD (GitHub Actions or similar).
+- Comfortable working asynchronously in English.
+- Bonus: Airflow, MLflow, Prometheus/Grafana, or a background in energy.
+
+What we offer
+- €55k–70k gross per year depending on experience, plus a stock option plan.
+- Fully remote, flexible hours, 30 days of paid holidays.
+- Annual learning budget of €1,500 and a home-office stipend.
+- A small, senior team that reviews your work and teaches you a lot.
+
+How to apply
+Send us your CV and a short note about a system you kept running in production. We reply to every application within a week.
+
+Orbita Labs is an equal opportunity employer.

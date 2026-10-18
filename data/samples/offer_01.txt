@@ -1,0 +1,40 @@
+Junior Data Engineer (Python + BigQuery)
+
+Nubelia Analytics · Barcelona, España (híbrido, 3 días en oficina)
+
+Sobre nosotros
+Somos Nubelia Analytics, una consultora de datos con 60 personas que ayuda a empresas de retail y logística a tomar decisiones con sus datos. Trabajamos en proyectos con clientes reales, en equipos pequeños y con mucha autonomía.
+
+Tu papel
+Te incorporarás al equipo de ingeniería de datos para construir y mantener los pipelines que alimentan los cuadros de mando de nuestros clientes. Trabajarás junto a perfiles senior que te acompañarán desde el primer día.
+
+Qué harás
+- Desarrollar pipelines de ingesta y transformación de datos en Python.
+- Modelar tablas y escribir consultas SQL sobre BigQuery.
+- Escribir tests y documentar lo que construyes.
+- Colaborar con el equipo de BI en dashboards de Looker Studio.
+- Participar en las revisiones de código del equipo.
+
+Qué buscamos
+- Grado en Informática, Ingeniería, Matemáticas, IA o similar (o experiencia equivalente).
+- 1 o 2 años de experiencia con Python.
+- Buen nivel de SQL.
+- Conocimientos de Git.
+- Nivel alto de español e inglés (profesional).
+
+Suma puntos
+- Experiencia con Google Cloud Platform, sobre todo BigQuery.
+- Conocimientos de Docker.
+- Haber trabajado con tests automáticos (pytest).
+- Ganas de aprender y de preguntar.
+
+Qué ofrecemos
+- Contrato indefinido, jornada completa.
+- Salario: 28.000 - 32.000 € brutos/año, según experiencia.
+- 25 días de vacaciones + 24 y 31 de diciembre libres.
+- Seguro médico y ayuda para formación y certificaciones.
+- Horario flexible de entrada (8:00 a 10:00).
+
+Proceso: llamada de 20 minutos con RR. HH., prueba técnica corta en casa y entrevista con el equipo.
+
+Nubelia Analytics es un empleador que promueve la igualdad de oportunidades. Todas las candidaturas se evaluarán sin discriminación.
