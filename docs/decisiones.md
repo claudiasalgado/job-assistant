@@ -66,7 +66,8 @@
 
 - **Fecha:** 2026-10-18
 - **Decisión:** llamar a Gemini en Vertex AI con el SDK `google-genai`
-  (`enterprise=True`, autenticado con ADC) y obtener el JSON pasando la
+  (modo Vertex activado con la variable `GOOGLE_GENAI_USE_ENTERPRISE=true`,
+  autenticado con ADC) y obtener el JSON pasando la
   clase Pydantic `ExtractedOffer` como `response_json_schema`. El resultado
   se valida igualmente con Pydantic.
 - **Contexto:** el extractor convierte el texto libre de una oferta en un
@@ -104,5 +105,28 @@
   solo se probó con 2.5, con un resultado correcto tras ajustar el prompt.
 - **Consecuencia:** una generación de modelo anterior, que se retirará
   antes. La equivalencia de calidad se ha visto en una oferta y una
-  ejecución, no se ha medido. Revisar cuando los modelos 3.x lleguen a la
-  UE. Cambiar de modelo o región es una línea del `.env`.
+  ejecución, no se ha medido, y esa prueba se hizo con la temperatura por
+  defecto (antes de la decisión 006), así que pudo influir el azar. Revisar
+  cuando los modelos 3.x lleguen a la UE. Cambiar de modelo o región es una
+  línea del `.env`.
+
+## 006 · Temperatura 0 en el extractor
+
+- **Fecha:** 2026-10-18
+- **Decisión:** llamar a Gemini con `temperature=0` en la extracción de
+  ofertas.
+- **Contexto:** la decisión 003 usa datos fijos para repetir pruebas y
+  comparar resultados al cambiar un prompt o un modelo. Con la temperatura
+  por defecto, la misma oferta puede dar salidas distintas en cada
+  ejecución, y no se distingue el efecto del cambio del efecto del azar.
+- **Alternativas descartadas:**
+  - Temperatura por defecto: más variedad, que en extracción no aporta nada.
+  - `temperature=0` con `seed` fijo: algo más reproducible, pero tampoco
+    garantiza salidas idénticas y añade un parámetro más. Se puede añadir
+    si al comparar modelos sigue habiendo ruido.
+- **Motivo:** extraer datos no es una tarea creativa. Lo que interesa es
+  que la misma entrada dé la misma salida.
+- **Consecuencia:** con temperatura 0 Gemini no es totalmente
+  determinista (el cálculo en GPU varía un poco), así que la salida es muy
+  estable pero no idéntica siempre. No se aplica al adaptador de CV ni a
+  la carta, donde algo de variedad al redactar sí aporta.

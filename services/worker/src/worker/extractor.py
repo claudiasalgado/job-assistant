@@ -24,6 +24,8 @@ def extract_offer(offer_text: str, client: genai.Client | None = None) -> Extrac
             system_instruction=PROMPT_PATH.read_text(encoding="utf-8"),
             response_mime_type="application/json",
             response_json_schema=ExtractedOffer.model_json_schema(),
+            # Extraer no es creativo: la misma oferta debe dar el mismo JSON
+            temperature=0,
         ),
     )
 
