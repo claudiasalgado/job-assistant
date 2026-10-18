@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="{{ cv.language }}">
+<head>
+  <meta charset="utf-8">
+  <title>{{ cv.personal.name }}</title>
+  <meta name="author" content="{{ cv.personal.name }}">
+  <meta name="description" content="{{ cv.headline }}">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  {#- Mismas clases y mismo orden que el CV hecho a mano: el orden del HTML
+      es el orden en que lo lee un ATS. -#}
+  <header class="cabecera">
+    <h1>{{ cv.personal.name }}</h1>
+    <p class="contacto">
+      {{ contact | join(" | ") }}
+      {%- for label, url in links %} | <a href="{{ url }}">{{ label }}</a>{% endfor %}
+    </p>
+    <p class="titular">{{ cv.headline }}</p>
+    <p class="resumen">{{ cv.summary }}</p>
+  </header>
+
+  <section>
+    <h2>{{ t.experience }}</h2>
+    {% for e in cv.experience %}
+    <div class="entrada">
+      <div class="linea">
+        <h3>{{ e.title }} <span class="org">- {{ e.company }}</span></h3>
+        <span class="fecha">{{ e.start | month }} - {{ e.end | month if e.end else t.present }}</span>
+      </div>
+      {% if e.achievements %}
+      <ul>
+        {% for a in e.achievements %}
+        <li>{{ a.text }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </section>
+
+  <section>
+    <h2>{{ t.education }}</h2>
+    {% for ed in cv.education %}
+    <div class="entrada">
+      <div class="linea">
+        <h3>{{ ed.degree }} <span class="org">- {{ ed.institution }}</span></h3>
+        <span class="fecha">{{ ed.start | month }} - {{ ed.end | month if ed.end else t.present }}</span>
+      </div>
+      {% if ed.description %}
+      <p class="descripcion">{{ ed.description }}</p>
+      {% endif %}
+      {% if ed.details %}
+      <ul>
+        {% for d in ed.details %}
+        <li>{{ d }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </section>
+
+  {% if cv.projects %}
+  <section>
+    <h2>{{ t.projects }}</h2>
+    {% for p in cv.projects %}
+    <div class="entrada">
+      <p class="proyecto">
+        <span class="nombre-proyecto">{{ p.name }}:</span>
+        {{ p.description }} ({{ p.stack | join(", ") }})
+        {%- if p.url %}. <a href="{{ p.url }}">{{ p.url }}</a>{% endif %}
+      </p>
+    </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  <section>
+    <h2>{{ t.skills }}</h2>
+    {% for category, names in skill_groups %}
+    <p class="skills">
+      {%- if category %}<strong>{{ category }}:</strong> {% endif %}{{ names | join(", ") -}}
+    </p>
+    {% endfor %}
+  </section>
+
+  {% if cv.certifications %}
+  <section>
+    <h2>{{ t.certifications }}</h2>
+    <ul>
+      {% for c in cv.certifications %}
+      <li>{{ c }}</li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  <section>
+    <h2>{{ t.languages }}</h2>
+    <ul>
+      {% for l in cv.languages %}
+      <li><strong>{{ l.name }}:</strong> {{ l.level }}</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  {% if cv.volunteering %}
+  <section>
+    <h2>{{ t.volunteering }}</h2>
+    <ul class="lista-voluntariado">
+      {% for v in cv.volunteering %}
+      <li><span class="nombre-proyecto">{{ v.organization }}:</span> {{ v.description }}</li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+</body>
+</html>

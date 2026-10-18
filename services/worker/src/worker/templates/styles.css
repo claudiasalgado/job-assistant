@@ -1,0 +1,241 @@
+/* ============================================================
+   Estilos del CV generado (plantilla cv.html)
+   Paleta y tipografía extraídas del original de Canva.
+   Una sola columna, sin tablas y sin encabezados/pies: ATS-safe.
+   ============================================================ */
+
+/* ---------- Tipografía ----------
+   Proxima Nova es comercial y no está instalada, así que el stack
+   cae en Mulish (la gratuita más parecida en proporciones).
+   Si algún día tienes Proxima Nova instalada en el sistema,
+   se usará automáticamente sin tocar nada más.
+   Los ficheros son variables: un solo archivo cubre 200-1000.        */
+
+@font-face {
+  font-family: 'Mulish';
+  src: url('fonts/Mulish.ttf') format('truetype');
+  font-weight: 200 1000;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Mulish';
+  src: url('fonts/Mulish-Italic.ttf') format('truetype');
+  font-weight: 200 1000;
+  font-style: italic;
+}
+
+/* ---------- Variables ---------- */
+
+:root {
+  --turquesa:       #0097B2;  /* nombre, titular, cargos y secciones */
+  --turquesa-claro: #67C5D6;  /* enlaces */
+  --gris:           #737373;  /* empresas, instituciones y fechas */
+  --tinta:          #000000;  /* cuerpo de texto */
+
+  --fuente: 'Proxima Nova', 'Mulish', 'Helvetica Neue', Arial, sans-serif;
+
+  --cuerpo:    10pt;
+  --subtitulo: 11pt;
+  --seccion:   12pt;
+  --nombre:    24pt;
+
+  --interlineado: 1.42;
+}
+
+/* ---------- Página ---------- */
+
+@page {
+  size: A4;
+  margin: 13mm 13mm 14mm 13mm;
+}
+
+/* ---------- Reset ---------- */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--fuente);
+  font-size: var(--cuerpo);
+  line-height: var(--interlineado);
+  color: var(--tinta);
+  text-align: justify;
+  hyphens: none;
+}
+
+/* ---------- Cabecera ---------- */
+
+.cabecera {
+  margin-bottom: 8pt;
+}
+
+h1 {
+  font-size: var(--nombre);
+  font-weight: 700;
+  color: var(--turquesa);
+  letter-spacing: -0.2pt;
+  line-height: 1.15;
+  text-align: left;
+}
+
+.contacto {
+  font-size: var(--cuerpo);
+  color: var(--gris);
+  margin-top: 2pt;
+  text-align: left;
+}
+
+.contacto a {
+  color: var(--turquesa-claro);
+  text-decoration: none;
+}
+
+.titular {
+  font-size: var(--seccion);
+  font-weight: 700;
+  color: var(--turquesa);
+  letter-spacing: 1.1pt;
+  text-transform: uppercase;
+  margin-top: 8pt;
+  text-align: left;
+}
+
+.resumen {
+  margin-top: 3pt;
+}
+
+/* ---------- Secciones ---------- */
+
+section {
+  margin-top: 9.5pt;
+  break-inside: auto;
+}
+
+h2 {
+  font-size: var(--seccion);
+  font-weight: 700;
+  color: var(--tinta);
+  letter-spacing: 1.1pt;
+  text-transform: uppercase;
+  margin-bottom: 5.5pt;
+  text-align: left;
+  break-after: avoid;
+}
+
+/* ---------- Entradas (cargo / titulación + fechas) ---------- */
+
+.entrada {
+  margin-bottom: 6.5pt;
+  break-inside: avoid;
+}
+
+.entrada:last-child {
+  margin-bottom: 0;
+}
+
+/* El título va PRIMERO en el HTML y la fecha después.
+   Así el orden de lectura del parser es el correcto aunque
+   visualmente la fecha aparezca alineada a la derecha.        */
+.linea {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10pt;
+}
+
+h3 {
+  font-size: var(--subtitulo);
+  font-weight: 700;
+  color: var(--turquesa);
+  text-align: left;
+  line-height: 1.3;
+}
+
+h3 .org {
+  color: var(--gris);
+}
+
+.fecha {
+  font-size: var(--cuerpo);
+  color: var(--gris);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.descripcion {
+  margin-top: 2pt;
+}
+
+/* ---------- Listas ---------- */
+
+ul {
+  list-style: disc;
+  margin-top: 2pt;
+  padding-left: 13pt;
+}
+
+li {
+  margin-bottom: 1pt;
+}
+
+li::marker {
+  color: var(--tinta);
+}
+
+/* ---------- Proyectos y voluntariado ---------- */
+
+.nombre-proyecto {
+  font-weight: 700;
+  color: var(--turquesa);
+}
+
+.proyecto {
+  margin-bottom: 0;
+}
+
+.lista-voluntariado {
+  list-style: none;
+  padding-left: 0;
+}
+
+.lista-voluntariado li {
+  margin-bottom: 2pt;
+}
+
+/* ---------- Competencias ---------- */
+
+/* En comas y no en interpuntos: muchos ATS parten la cadena
+   por comas, punto y coma o barras. El "·" no siempre lo pillan. */
+.skills {
+  font-size: 9pt;
+  text-align: left;
+  margin-bottom: 1.5pt;
+}
+
+.skills:last-child {
+  margin-bottom: 0;
+}
+
+/* La etiqueta de categoría en negro y no en turquesa: la línea
+   se lee como una lista, no como cuatro subtítulos. */
+.skills strong {
+  color: var(--tinta);
+}
+
+/* ---------- Vista en navegador ----------
+   Solo afecta al preview con Live Server, no al PDF.  */
+
+@media screen {
+  body {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 20px auto;
+    padding: 13mm;
+    background: #fff;
+    box-shadow: 0 2px 18px rgba(0, 0, 0, 0.14);
+  }
+}

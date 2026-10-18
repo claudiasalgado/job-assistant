@@ -325,3 +325,42 @@
   fuera propia; por cuarta vez, "un compañero" en plural; y una finalidad
   añadida ("for quality assurance"). Son los candidatos para el LLM como
   juez.
+
+## 012 · Plantilla Jinja2 única y PDF con WeasyPrint
+
+- **Fecha:** 2026-10-18
+- **Decisión:** el CV se genera con una sola plantilla Jinja2
+  (`templates/cv.html`) que reproduce el diseño, las clases y el orden del
+  CV hecho a mano, más un diccionario de textos fijos por idioma
+  (`LABELS` en `render.py`). WeasyPrint convierte el HTML en un PDF/UA-1.
+  La plantilla, el CSS y las fuentes Mulish (con su licencia OFL) viven en
+  `src/worker/templates/`, junto a los prompts.
+- **Contexto:** el CV se mantenía a mano como dos HTML (uno por idioma) con
+  un CSS común y un script de WeasyPrint. Su diseño ya estaba pensado para
+  los ATS: una columna, el cargo antes que la fecha en el HTML, skills
+  separadas por comas y PDF etiquetado.
+- **Alternativas descartadas:**
+  - f-strings o `string.Template` en vez de Jinja2: sin dependencias, pero
+    con bucles y condicionales se vuelve ilegible.
+  - Generar el HTML desde Python (`dominate`): no habría un fichero HTML
+    que previsualizar y editar.
+  - Dos plantillas, una por idioma: cada cambio de diseño habría que
+    hacerlo dos veces y acabarían desincronizadas. Con un perfil por idioma
+    (decisión 011) solo cambian unas diez etiquetas.
+  - Chromium sin interfaz (Playwright) para el PDF: renderiza como Chrome,
+    pero la imagen pesa unos 300 MB y no genera PDF/UA.
+  - ReportLab: el PDF se dibuja con código y se perdería el diseño en
+    HTML y CSS.
+- **Motivo:** se conserva el diseño y su compatibilidad con los ATS, que
+  ya estaba probada. Jinja2 es el estándar en Python y es el mismo motor
+  de plantillas que se usará con FastAPI.
+- **Consecuencia:** la plantilla usa `autoescape` (un texto con "<" no
+  rompe el HTML) y `StrictUndefined` (una variable mal escrita falla en vez
+  de dejar un hueco en el CV). `render_html` y `render_pdf` van separados
+  e importan WeasyPrint solo al generar el PDF, así que el HTML se puede
+  testear sin las librerías del sistema. WeasyPrint necesita pango: en
+  macOS, `DYLD_FALLBACK_LIBRARY_PATH` debe ir en el `.env`, porque `uv run`
+  no hereda las variables `DYLD_*` de la terminal; en Docker, la imagen del
+  worker tendrá que instalar pango y será más pesada. Al extraer el texto
+  del PDF, las viñetas aparecen agrupadas al final: pendiente de revisar con
+  el test de pdfplumber.
