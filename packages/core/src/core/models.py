@@ -51,3 +51,128 @@ class ExtractedOffer(BaseModel):
     responsibilities: list[str] = Field(
         description="Tareas principales del puesto, una frase corta por elemento."
     )
+
+
+# --- Perfil (refleja data/samples/profile.json) ---
+
+
+class Achievement(BaseModel):
+    id: str
+    text: str
+
+
+class Experience(BaseModel):
+    id: str
+    company: str
+    title: str
+    location: str | None
+    start: str
+    end: str | None
+    achievements: list[Achievement]
+
+
+class Education(BaseModel):
+    institution: str
+    degree: str
+    start: str
+    end: str | None
+
+
+class Skill(BaseModel):
+    name: str
+    level: Literal["beginner", "intermediate", "advanced"]
+    years: int
+
+
+class Language(BaseModel):
+    name: str
+    level: str
+
+
+class Personal(BaseModel):
+    name: str
+    email: str
+    phone: str | None
+    location: str | None
+    links: dict[str, str]
+
+
+class Profile(BaseModel):
+    personal: Personal
+    summary: str
+    experience: list[Experience]
+    education: list[Education]
+    skills: list[Skill]
+    languages: list[Language]
+
+
+# --- CV adaptado: lo que propone Gemini (borrador) ---
+
+
+class DraftAchievement(BaseModel):
+    source_id: str = Field(
+        description="Id exacto del logro del perfil en el que se basa este punto."
+    )
+    text: str = Field(
+        description=(
+            "El logro reformulado para esta oferta, en el idioma de la oferta. "
+            "Conserva todas las cifras, porcentajes y datos del original sin cambiarlos."
+        )
+    )
+
+
+class DraftExperience(BaseModel):
+    experience_id: str = Field(description="Id exacto de la experiencia del perfil.")
+    achievements: list[DraftAchievement] = Field(
+        description="Los logros de esa experiencia más relevantes para la oferta, del más al menos relevante."
+    )
+
+
+class TailoredCVDraft(BaseModel):
+    """Lo único que genera Gemini. Empresas, cargos y fechas los pone el código."""
+
+    summary: str = Field(
+        description=(
+            "Resumen profesional de 2 o 3 frases adaptado a la oferta, en su idioma. "
+            "Solo puede afirmar lo que se deduce del perfil."
+        )
+    )
+    experiences: list[DraftExperience] = Field(
+        description="Experiencias del perfil a incluir, de más a menos relevante."
+    )
+    skills: list[str] = Field(
+        description=(
+            "Nombres de skills del perfil a destacar, copiados exactamente tal cual "
+            "aparecen en el perfil. No incluyas ninguna que no esté en el perfil."
+        )
+    )
+
+
+# --- CV adaptado final: borrador validado + datos del perfil ---
+
+
+class TailoredAchievement(BaseModel):
+    source_id: str
+    text: str
+    original_text: str
+
+
+class TailoredExperience(BaseModel):
+    id: str
+    company: str
+    title: str
+    location: str | None
+    start: str
+    end: str | None
+    achievements: list[TailoredAchievement]
+
+
+class TailoredCV(BaseModel):
+    language: str
+    personal: Personal
+    summary: str
+    experience: list[TailoredExperience]
+    education: list[Education]
+    skills: list[Skill]
+    languages: list[Language]
+    warnings: list[str] = []

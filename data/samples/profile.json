@@ -12,26 +12,43 @@
   "summary": "Ingeniera junior de datos e IA con experiencia en pipelines en Python y despliegue de modelos en la nube. Busca un primer puesto donde crecer en MLOps.",
   "experience": [
     {
+      "id": "datos-norte",
       "company": "Datos del Norte S.L.",
       "title": "Junior Data Engineer",
       "location": "Barcelona, España",
       "start": "2025-02",
       "end": null,
       "achievements": [
-        "Construí un pipeline de ingesta diaria en Python que redujo de 3 horas a 20 minutos la carga de datos de ventas.",
-        "Migré tres informes de Excel a BigQuery y Looker Studio, usados cada semana por el equipo comercial.",
-        "Añadí tests con pytest al 80 % del código del pipeline."
+        {
+          "id": "datos-norte-1",
+          "text": "Construí un pipeline de ingesta diaria en Python que redujo de 3 horas a 20 minutos la carga de datos de ventas."
+        },
+        {
+          "id": "datos-norte-2",
+          "text": "Migré tres informes de Excel a BigQuery y Looker Studio, usados cada semana por el equipo comercial."
+        },
+        {
+          "id": "datos-norte-3",
+          "text": "Añadí tests con pytest al 80 % del código del pipeline."
+        }
       ]
     },
     {
+      "id": "lab-cuantico",
       "company": "Laboratorio Cuántico Ficticio",
       "title": "Becaria de investigación en IA",
       "location": "Remoto",
       "start": "2024-06",
       "end": "2024-12",
       "achievements": [
-        "Entrené y evalué un clasificador de texto con scikit-learn y PyTorch, con un F1 del 0,86.",
-        "Documenté los experimentos para que otro compañero pudiera reproducirlos."
+        {
+          "id": "lab-cuantico-1",
+          "text": "Entrené y evalué un clasificador de texto con scikit-learn y PyTorch, con un F1 del 0,86."
+        },
+        {
+          "id": "lab-cuantico-2",
+          "text": "Documenté los experimentos para que otro compañero pudiera reproducirlos."
+        }
       ]
     }
   ],
