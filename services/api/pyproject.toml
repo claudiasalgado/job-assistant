@@ -1,7 +1,7 @@
 [project]
 name = "api"
 version = "0.1.0"
-description = "Add your description here"
+description = "API HTTP del job-assistant (pendiente)"
 readme = "README.md"
 authors = [
     { name = "Clàudia Salgado", email = "235334667+claudiasalgado@users.noreply.github.com" }
@@ -10,9 +10,6 @@ requires-python = ">=3.12"
 dependencies = [
     "core",
 ]
-
-[project.scripts]
-api = "api:main"
 
 [build-system]
 requires = ["uv_build>=0.13.1,<0.14.0"]

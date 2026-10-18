@@ -1,7 +1,7 @@
 [project]
 name = "core"
 version = "0.1.0"
-description = "Add your description here"
+description = "Modelos Pydantic compartidos: oferta, perfil y CV adaptado"
 readme = "README.md"
 authors = [
     { name = "Clàudia Salgado", email = "235334667+claudiasalgado@users.noreply.github.com" }

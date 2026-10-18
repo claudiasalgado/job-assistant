@@ -1,7 +1,7 @@
 [project]
 name = "worker"
 version = "0.1.0"
-description = "Add your description here"
+description = "Extracción de ofertas, adaptación del CV con Gemini y generación del PDF"
 readme = "README.md"
 authors = [
     { name = "Clàudia Salgado", email = "235334667+claudiasalgado@users.noreply.github.com" }
@@ -15,7 +15,6 @@ dependencies = [
 ]
 
 [project.scripts]
-worker = "worker:main"
 cv = "worker.cli:main"
 
 [build-system]
