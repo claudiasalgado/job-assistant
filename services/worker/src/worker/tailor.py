@@ -27,17 +27,23 @@ SENIORITY_RE = re.compile(r"\b(intern|junior|mid|senior|lead)\b")
 def tailor_cv(
     offer: ExtractedOffer, profile: Profile, client: genai.Client | None = None
 ) -> TailoredCV:
-    """Genera un CV adaptado a la oferta: Gemini propone, el código valida y monta."""
+    """Genera un CV adaptado a la oferta: Gemini propone, el código valida y monta.
+
+    El CV sale en el idioma del perfil que se pase: elegir idioma es elegir perfil.
+    """
     model = os.environ.get("GEMINI_MODEL")
     if not model:
         raise RuntimeError("Falta la variable de entorno GEMINI_MODEL (ver .env.example)")
 
     client = client or genai.Client()
 
-    # Minimización de datos: Gemini no necesita nombre, email ni teléfono
+    # Minimización de datos: solo lo que Gemini adapta o necesita para el resumen.
+    # Ni datos personales, ni el titular o el seniority que no debe tocar.
     payload = {
         "offer": offer.model_dump(),
-        "profile": profile.model_dump(exclude={"personal"}),
+        "profile": profile.model_dump(
+            include={"language", "summary", "experience", "education", "skills"}
+        ),
     }
 
     response = client.models.generate_content(
@@ -54,7 +60,7 @@ def tailor_cv(
         raise ValueError("Gemini devolvió una respuesta vacía (¿filtro de seguridad?)")
 
     draft = TailoredCVDraft.model_validate_json(response.text)
-    return build_tailored_cv(draft, profile, language=offer.language)
+    return build_tailored_cv(draft, profile)
 
 
 def _numbers(text: str) -> set[str]:
@@ -69,7 +75,7 @@ def _seniority_words(text: str) -> set[str]:
     return set(SENIORITY_RE.findall(plain))
 
 
-def build_tailored_cv(draft: TailoredCVDraft, profile: Profile, language: str) -> TailoredCV:
+def build_tailored_cv(draft: TailoredCVDraft, profile: Profile) -> TailoredCV:
     """Valida el borrador contra el perfil y monta el CV final.
 
     Todo lo que no se puede verificar en el perfil se descarta y queda
@@ -135,12 +141,9 @@ def build_tailored_cv(draft: TailoredCVDraft, profile: Profile, language: str) -
         if source_exp.id not in seen_experiences:
             warnings.append(f"Experiencia del perfil omitida por Gemini: {source_exp.id}")
 
-    # El nivel lo fija el perfil: el resumen debe nombrarlo y no mencionar otro (decisión 010)
-    levels = _seniority_words(draft.summary)
-    if profile.seniority not in levels:
-        warnings.append(f"El resumen no menciona el nivel del perfil ({profile.seniority})")
-    for level in sorted(levels - {profile.seniority}):
-        warnings.append(f"El resumen menciona un nivel distinto al del perfil: {level}")
+    # El resumen no menciona ningún nivel: la persona se presenta en su titular (decisión 011)
+    for level in sorted(_seniority_words(draft.summary)):
+        warnings.append(f"El resumen menciona un nivel profesional: {level}")
 
     # Sin distinguir mayúsculas, pero siempre con el nombre tal y como está en el perfil
     skills_by_name = {s.name.casefold(): s for s in profile.skills}
@@ -153,13 +156,16 @@ def build_tailored_cv(draft: TailoredCVDraft, profile: Profile, language: str) -
         skills.append(skill)
 
     return TailoredCV(
-        language=language,
+        language=profile.language,
         personal=profile.personal,
-        seniority=profile.seniority,
+        headline=profile.headline,
         summary=draft.summary,
         experience=experience,
         education=profile.education,
         skills=skills,
         languages=profile.languages,
+        certifications=profile.certifications,
+        volunteering=profile.volunteering,
+        projects=profile.projects,
         warnings=warnings,
     )

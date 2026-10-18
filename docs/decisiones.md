@@ -171,6 +171,8 @@
 ## 008 · Voz única y niveles de skill fijos en el CV adaptado
 
 - **Fecha:** 2026-10-18
+- **Estado:** la voz de los logros la cambia la decisión 011 (frases
+  nominales). La tabla de niveles sigue vigente.
 - **Decisión:** el prompt del adaptador fija:
   - la voz: resumen en frases nominales, sin verbos conjugados, y logros
     en primera persona del pasado sin pronombre ("Construí"; en inglés,
@@ -240,6 +242,8 @@
 ## 010 · El seniority lo fija el perfil y el código lo comprueba
 
 - **Fecha:** 2026-10-18
+- **Estado:** corregida por la decisión 011. El resumen ya no nombra el
+  nivel, y `seniority` queda solo para comparar con la oferta.
 - **Decisión:** `Profile` tiene un campo `seniority` (`intern`, `junior`,
   `mid`, `senior`, `lead`) y el código lo copia a `TailoredCV`, como las
   fechas o la empresa. El prompt pide que la primera frase del resumen
@@ -272,3 +276,52 @@
   pronombres ni avisos. Límites conocidos: "lead" usado como verbo en
   inglés daría un falso aviso, y `intern` no se detecta en castellano
   ("becaria"). Para un perfil `junior` no afectan.
+
+## 011 · Un perfil por idioma, titular propio y voz nominal
+
+- **Fecha:** 2026-10-18
+- **Decisión:**
+  - Hay un perfil por idioma (`profile.es.json`, `profile.en.json`) con
+    los mismos ids. El CV sale en el idioma del perfil que se elija; si no
+    se elige, en el de la oferta. Se genera un solo CV, no uno por idioma.
+    Gemini escribe en el idioma del perfil y no traduce.
+  - El perfil tiene un titular (`headline`) que copia el código. El
+    resumen no menciona ningún nivel profesional y el código avisa si lo
+    hace. `seniority` se queda en el perfil solo para el matching.
+  - Todo el CV usa frases nominales, también los logros ("Construcción
+    de...", "Development of..."), sin pronombres ni tercera persona.
+  - El perfil incorpora las secciones del CV real: descripción y puntos
+    en la formación, categoría de skill, certificaciones, voluntariado y
+    proyectos. Las copia el código; Gemini no las ve.
+- **Contexto:** al comparar el sistema con el CV real (un HTML por idioma)
+  salieron tres choques. El CV en inglés de la oferta 2 llevaba la
+  formación y los idiomas en castellano, porque lo que copia el código no
+  se traducía. El CV real no dice "junior" y la decisión 010 obligaba a
+  ponerlo. Y el CV real usa frases nominales, no la primera persona de la
+  decisión 008.
+- **Alternativas descartadas:**
+  - Que Gemini traduzca también lo que copia el código: un solo perfil,
+    pero más texto en sus manos, y justo en la formación, que es lo que más
+    pesa en un perfil junior.
+  - Cada texto del perfil como diccionario por idioma: un solo fichero,
+    pero el doble de pesado y más difícil de editar a mano.
+  - Generar siempre los dos idiomas: el doble de llamadas a Gemini para un
+    CV que casi siempre se envía en un solo idioma.
+  - Mantener la decisión 010: todos los CV dirían "junior", aunque la
+    persona haya decidido no ponerlo. Lo que había que proteger era no
+    subir el nivel, no obligar a nombrarlo.
+  - Verbo en pasado para los logros en inglés ("Built"): es la convención
+    habitual allí, pero el CV real en inglés ya usa frases nominales y así
+    los dos idiomas son coherentes.
+- **Motivo:** es como ya se mantenía el CV a mano (un HTML por idioma), y
+  quita el problema de la traducción en origen en vez de vigilarlo. Cada
+  persona decide cómo se presenta; el sistema solo impide exagerar.
+- **Consecuencia:** dos perfiles que mantener sincronizados. A Gemini se
+  le envía una lista blanca de campos (`include`), no una lista negra, para
+  que un campo personal nuevo no se le envíe por accidente. En las cuatro
+  combinaciones de oferta y perfil, el CV salió en el idioma del perfil, sin
+  niveles en el resumen y sin avisos. Siguen colándose fallos en el texto
+  libre: por segunda vez, la tarea "modelar tablas" de la oferta 1 como si
+  fuera propia; por cuarta vez, "un compañero" en plural; y una finalidad
+  añadida ("for quality assurance"). Son los candidatos para el LLM como
+  juez.

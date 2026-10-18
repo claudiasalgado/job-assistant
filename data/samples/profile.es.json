@@ -1,4 +1,5 @@
 {
+  "language": "es",
   "personal": {
     "name": "Marta Ejemplo Ruiz",
     "email": "marta.ejemplo@example.com",
@@ -9,8 +10,9 @@
       "linkedin": "https://www.linkedin.com/in/example-user"
     }
   },
+  "headline": "Ingeniera de datos e IA",
   "seniority": "junior",
-  "summary": "Ingeniera junior de datos e IA con experiencia en pipelines en Python y despliegue de modelos en la nube. Busca un primer puesto donde crecer en MLOps.",
+  "summary": "Ingeniera de datos e IA con experiencia en pipelines en Python y despliegue de modelos en la nube. Interés en crecer en MLOps.",
   "experience": [
     {
       "id": "datos-norte",
@@ -22,15 +24,15 @@
       "achievements": [
         {
           "id": "datos-norte-1",
-          "text": "Construí un pipeline de ingesta diaria en Python que redujo de 3 horas a 20 minutos la carga de datos de ventas."
+          "text": "Construcción de un pipeline de ingesta diaria en Python que redujo de 3 horas a 20 minutos la carga de datos de ventas."
         },
         {
           "id": "datos-norte-2",
-          "text": "Migré tres informes de Excel a BigQuery y Looker Studio, usados cada semana por el equipo comercial."
+          "text": "Migración de tres informes de Excel a BigQuery y Looker Studio, usados cada semana por el equipo comercial."
         },
         {
           "id": "datos-norte-3",
-          "text": "Añadí tests con pytest al 80 % del código del pipeline."
+          "text": "Tests con pytest para el 80 % del código del pipeline."
         }
       ]
     },
@@ -44,11 +46,11 @@
       "achievements": [
         {
           "id": "lab-cuantico-1",
-          "text": "Entrené y evalué un clasificador de texto con scikit-learn y PyTorch, con un F1 del 0,86."
+          "text": "Entrenamiento y evaluación de un clasificador de texto con scikit-learn y PyTorch, con un F1 del 0,86."
         },
         {
           "id": "lab-cuantico-2",
-          "text": "Documenté los experimentos para que otro compañero pudiera reproducirlos."
+          "text": "Documentación de los experimentos para que otro compañero pudiera reproducirlos."
         }
       ]
     }
@@ -58,7 +60,11 @@
       "institution": "Universidad Imaginaria de Cataluña",
       "degree": "Grado en Inteligencia Artificial",
       "start": "2021-09",
-      "end": "2025-06"
+      "end": "2025-06",
+      "description": null,
+      "details": [
+        "Trabajo de fin de grado sobre clasificación de texto, con una calificación de 9,1/10."
+      ]
     }
   ],
   "skills": [
@@ -73,8 +79,16 @@
     { "name": "Git", "level": "advanced", "years": 4 }
   ],
   "languages": [
-    { "name": "Español", "level": "native" },
-    { "name": "Catalán", "level": "native" },
+    { "name": "Español", "level": "lengua materna" },
+    { "name": "Catalán", "level": "lengua materna" },
     { "name": "Inglés", "level": "C1" }
-  ]
+  ],
+  "certifications": ["Google Cloud Associate Cloud Engineer"],
+  "volunteering": [
+    {
+      "organization": "Asociación Ficticia de Programación",
+      "description": "Mentora en talleres de programación para niños."
+    }
+  ],
+  "projects": []
 }

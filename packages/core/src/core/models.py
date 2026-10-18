@@ -76,12 +76,16 @@ class Education(BaseModel):
     degree: str
     start: str
     end: str | None
+    description: str | None = None
+    details: list[str] = []
 
 
 class Skill(BaseModel):
     name: str
     level: Literal["beginner", "intermediate", "advanced"]
     years: int
+    # Agrupa las skills en el CV ("Cloud y MLOps"); sin categoría van en una sola línea
+    category: str | None = None
 
 
 class Language(BaseModel):
@@ -97,15 +101,35 @@ class Personal(BaseModel):
     links: dict[str, str]
 
 
+class Volunteering(BaseModel):
+    organization: str
+    description: str
+
+
+class Project(BaseModel):
+    name: str
+    description: str
+    stack: list[str]
+    url: str | None
+
+
 class Profile(BaseModel):
+    """Perfil en un solo idioma: hay un fichero por idioma con los mismos ids."""
+
+    language: str  # ISO 639-1 del texto del perfil
     personal: Personal
-    # Lo fija la persona, no Gemini: el CV nunca debe subirlo para encajar con la oferta
+    # Como se presenta la persona en la cabecera; lo copia el código, nunca Gemini
+    headline: str
+    # Solo para comparar con la oferta: el CV no lo muestra ni Gemini lo menciona
     seniority: Literal["intern", "junior", "mid", "senior", "lead"]
     summary: str
     experience: list[Experience]
     education: list[Education]
     skills: list[Skill]
     languages: list[Language]
+    certifications: list[str] = []
+    volunteering: list[Volunteering] = []
+    projects: list[Project] = []
 
 
 # --- CV adaptado: lo que propone Gemini (borrador) ---
@@ -117,7 +141,7 @@ class DraftAchievement(BaseModel):
     )
     text: str = Field(
         description=(
-            "El logro reformulado para esta oferta, en el idioma de la oferta. "
+            "El logro reformulado para esta oferta, en el idioma del perfil. "
             "Conserva todas las cifras, porcentajes y datos del original sin cambiarlos."
         )
     )
@@ -135,12 +159,12 @@ class TailoredCVDraft(BaseModel):
 
     summary: str = Field(
         description=(
-            "Resumen profesional de 2 o 3 frases adaptado a la oferta, en su idioma. "
+            "Resumen profesional de 2 o 3 frases adaptado a la oferta, en el idioma del perfil. "
             "Solo puede afirmar lo que se deduce del perfil."
         )
     )
     experiences: list[DraftExperience] = Field(
-        description="Experiencias del perfil a incluir, de más a menos relevante."
+        description="Todas las experiencias del perfil, de más a menos relevante."
     )
     skills: list[str] = Field(
         description=(
@@ -172,10 +196,13 @@ class TailoredExperience(BaseModel):
 class TailoredCV(BaseModel):
     language: str
     personal: Personal
-    seniority: Literal["intern", "junior", "mid", "senior", "lead"]
+    headline: str
     summary: str
     experience: list[TailoredExperience]
     education: list[Education]
     skills: list[Skill]
     languages: list[Language]
+    certifications: list[str]
+    volunteering: list[Volunteering]
+    projects: list[Project]
     warnings: list[str] = []

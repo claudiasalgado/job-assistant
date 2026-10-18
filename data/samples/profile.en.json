@@ -1,0 +1,94 @@
+{
+  "language": "en",
+  "personal": {
+    "name": "Marta Ejemplo Ruiz",
+    "email": "marta.ejemplo@example.com",
+    "phone": "+34 600 000 000",
+    "location": "Barcelona, Spain",
+    "links": {
+      "github": "https://github.com/example-user",
+      "linkedin": "https://www.linkedin.com/in/example-user"
+    }
+  },
+  "headline": "Data and AI Engineer",
+  "seniority": "junior",
+  "summary": "Data and AI Engineer with experience in Python pipelines and cloud model deployment. Interested in growing into MLOps.",
+  "experience": [
+    {
+      "id": "datos-norte",
+      "company": "Datos del Norte S.L.",
+      "title": "Junior Data Engineer",
+      "location": "Barcelona, Spain",
+      "start": "2025-02",
+      "end": null,
+      "achievements": [
+        {
+          "id": "datos-norte-1",
+          "text": "Development of a daily ingestion pipeline in Python that cut sales data loading time from 3 hours to 20 minutes."
+        },
+        {
+          "id": "datos-norte-2",
+          "text": "Migration of three Excel reports to BigQuery and Looker Studio, used weekly by the sales team."
+        },
+        {
+          "id": "datos-norte-3",
+          "text": "Pytest test suite covering 80% of the pipeline code."
+        }
+      ]
+    },
+    {
+      "id": "lab-cuantico",
+      "company": "Laboratorio Cuántico Ficticio",
+      "title": "AI Research Intern",
+      "location": "Remote",
+      "start": "2024-06",
+      "end": "2024-12",
+      "achievements": [
+        {
+          "id": "lab-cuantico-1",
+          "text": "Training and evaluation of a text classifier with scikit-learn and PyTorch, reaching an F1 score of 0.86."
+        },
+        {
+          "id": "lab-cuantico-2",
+          "text": "Documentation of the experiments so that a colleague could reproduce them."
+        }
+      ]
+    }
+  ],
+  "education": [
+    {
+      "institution": "Universidad Imaginaria de Cataluña",
+      "degree": "Bachelor's Degree in Artificial Intelligence",
+      "start": "2021-09",
+      "end": "2025-06",
+      "description": null,
+      "details": [
+        "Bachelor's thesis on text classification, graded 9.1/10."
+      ]
+    }
+  ],
+  "skills": [
+    { "name": "Python", "level": "advanced", "years": 4, "category": "Programming languages" },
+    { "name": "SQL", "level": "intermediate", "years": 2, "category": "Programming languages" },
+    { "name": "PyTorch", "level": "intermediate", "years": 1, "category": "AI and ML" },
+    { "name": "scikit-learn", "level": "intermediate", "years": 2, "category": "AI and ML" },
+    { "name": "FastAPI", "level": "intermediate", "years": 1, "category": "Frameworks and tools" },
+    { "name": "BigQuery", "level": "intermediate", "years": 1, "category": "Cloud and data" },
+    { "name": "Google Cloud Platform", "level": "beginner", "years": 1, "category": "Cloud and data" },
+    { "name": "Docker", "level": "beginner", "years": 1, "category": "Frameworks and tools" },
+    { "name": "Git", "level": "advanced", "years": 4, "category": "Frameworks and tools" }
+  ],
+  "languages": [
+    { "name": "Spanish", "level": "native" },
+    { "name": "Catalan", "level": "native" },
+    { "name": "English", "level": "C1" }
+  ],
+  "certifications": ["Google Cloud Associate Cloud Engineer"],
+  "volunteering": [
+    {
+      "organization": "Asociación Ficticia de Programación",
+      "description": "Mentor at programming workshops for children."
+    }
+  ],
+  "projects": []
+}
