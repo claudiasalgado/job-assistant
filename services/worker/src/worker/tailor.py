@@ -17,6 +17,9 @@ from google.genai import types
 
 PROMPT_PATH = Path(__file__).parent / "prompts" / "tailor_cv.md"
 
+# Campos del perfil que nunca se envían a Gemini
+PROFILE_FIELDS_NOT_SENT = {"personal", "seniority"}
+
 # Enteros y decimales con punto o coma: "3", "80", "0,86", "1.000"
 NUMBER_RE = re.compile(r"\d+(?:[.,]\d+)*")
 
@@ -37,13 +40,12 @@ def tailor_cv(
 
     client = client or genai.Client()
 
-    # Minimización de datos: solo lo que Gemini adapta o necesita para el resumen.
-    # Ni datos personales, ni el titular o el seniority que no debe tocar.
+    # Gemini ve todo lo profesional para escribir un buen resumen (decisión 014).
+    # Fuera: los datos personales, que no aportan, y el seniority, para que no lo
+    # escriba. Es una lista negra: un campo sensible nuevo en Profile se añade aquí.
     payload = {
         "offer": offer.model_dump(),
-        "profile": profile.model_dump(
-            include={"language", "summary", "experience", "education", "skills"}
-        ),
+        "profile": profile.model_dump(exclude=PROFILE_FIELDS_NOT_SENT),
     }
 
     response = client.models.generate_content(

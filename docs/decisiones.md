@@ -175,7 +175,8 @@
 
 - **Fecha:** 2026-10-18
 - **Estado:** la voz de los logros la cambia la decisión 011 (frases
-  nominales). La tabla de niveles sigue vigente.
+  nominales). La tabla de niveles la sustituye la decisión 015 (el
+  resumen no califica niveles).
 - **Decisión:** el prompt del adaptador fija:
   - la voz: resumen en frases nominales, sin verbos conjugados, y logros
     en primera persona del pasado sin pronombre ("Construí"; en inglés,
@@ -397,3 +398,66 @@
   y una inventada vuelven al original con aviso) y con Gemini (dos
   ejecuciones con la oferta 2 en castellano, ya con el prompt aclarado,
   sin cifras perdidas ni avisos).
+
+## 014 · Gemini ve todo el perfil profesional y nunca los datos personales
+
+- **Fecha:** 2026-10-18
+- **Decisión:** el adaptador envía a Gemini el perfil completo menos los
+  campos de `PROFILE_FIELDS_NOT_SENT` en `tailor.py`: `personal` (nombre,
+  email, teléfono, enlaces) y `seniority`. Pasa de una lista blanca a una
+  lista negra. El prompt pide que el resumen use todo el perfil, que el
+  cargo salga solo del titular o de la formación y nunca del puesto de la
+  oferta, y que una certificación no se presente como cargo.
+- **Contexto:** con el perfil real, la lista blanca de la minimización
+  (`language`, `summary`, `experience`, `education`, `skills`) dejaba
+  fuera las certificaciones y el titular. El resumen en castellano las
+  omitió, y el de inglés usó el nombre de una certificación como si fuera
+  un cargo. Al pedir que no repitiera el titular, el resumen presentó a la
+  persona con el cargo de la oferta ("Ingeniera de datos" para una oferta
+  de Data Engineer).
+- **Alternativas descartadas:**
+  - Ampliar la lista blanca con certificaciones, titular, idiomas,
+    voluntariado y proyectos: más segura ante campos nuevos, pero cada
+    campo profesional nuevo hay que acordarse de añadirlo o Gemini no lo
+    ve.
+  - Una segunda llamada solo para el resumen, con el CV ya montado: más
+    coherente, pero el doble de llamadas y de latencia. Con una sola
+    experiencia no compensa todavía.
+- **Motivo:** la minimización protege los datos personales, y esos siguen
+  fuera. Los datos profesionales no son sensibles y son justo lo que
+  necesita el resumen. El riesgo de la lista negra (un campo sensible
+  nuevo que se envía por olvido) se limita con una constante visible en un
+  solo sitio.
+- **Consecuencia:** cualquier campo sensible nuevo en `Profile` (por
+  ejemplo, un salario deseado) debe añadirse a `PROFILE_FIELDS_NOT_SENT`.
+  Pendiente: un test que lo compruebe. En las pruebas con el perfil real
+  (oferta 1 en castellano, oferta 2 en los dos idiomas) el cargo salió del
+  titular y las certificaciones aparecieron como certificaciones. Una vez,
+  en castellano, el resumen omitió el máster.
+
+## 015 · El resumen no califica el nivel de las skills
+
+- **Fecha:** 2026-10-18
+- **Decisión:** el resumen nombra las skills sin expresiones de nivel
+  ("Python, SQL y Docker", no "dominio de Python"). El `level` del perfil
+  solo sirve para elegir qué skills destacar y en qué orden. Sustituye a
+  la tabla de niveles de la decisión 008.
+- **Contexto:** con la tabla, Gemini escribió "experience with CI/CD"
+  para una skill en `beginner` y "conocimientos de" para una en
+  `intermediate`, una expresión que la tabla no tiene. Era lo peor de los
+  dos mundos: frases rígidas y sin garantía de que se cumplieran.
+- **Alternativas descartadas:**
+  - Mantener la tabla y comprobarla en código: garantiza el nivel, pero
+    las frases quedan de robot y solo detecta las expresiones listadas
+    ("sólidos conocimientos" se escaparía).
+  - Dejar que Gemini exprese el nivel con libertad: texto natural, pero
+    el sesgo del modelo es exagerar para encajar con la oferta y nadie lo
+    comprueba.
+  - Un juez LLM que revise si el texto exagera: sigue en el roadmap.
+- **Motivo:** un nivel en el CV es una afirmación sobre la persona, como
+  una cifra. Si no se afirma, no hay nada que vigilar. El nivel se
+  demuestra con la experiencia, la formación y las certificaciones, y los
+  niveles autoevaluados convencen poco a los reclutadores.
+- **Consecuencia:** en tres pruebas ningún resumen calificó niveles. En
+  una apareció "con experiencia en Google Cloud Platform", que no está
+  prohibido pero se acerca. Es texto libre: candidato para el juez LLM.
