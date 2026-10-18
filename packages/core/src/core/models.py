@@ -99,6 +99,8 @@ class Personal(BaseModel):
 
 class Profile(BaseModel):
     personal: Personal
+    # Lo fija la persona, no Gemini: el CV nunca debe subirlo para encajar con la oferta
+    seniority: Literal["intern", "junior", "mid", "senior", "lead"]
     summary: str
     experience: list[Experience]
     education: list[Education]
@@ -170,6 +172,7 @@ class TailoredExperience(BaseModel):
 class TailoredCV(BaseModel):
     language: str
     personal: Personal
+    seniority: Literal["intern", "junior", "mid", "senior", "lead"]
     summary: str
     experience: list[TailoredExperience]
     education: list[Education]

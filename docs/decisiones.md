@@ -236,3 +236,39 @@
   candidatos para el futuro: comprobar en código la tabla de niveles,
   bajar la temperatura del adaptador o el LLM como juez. Si la lista de
   experiencias crece, se puede pasar a dejar que Gemini decida.
+
+## 010 · El seniority lo fija el perfil y el código lo comprueba
+
+- **Fecha:** 2026-10-18
+- **Decisión:** `Profile` tiene un campo `seniority` (`intern`, `junior`,
+  `mid`, `senior`, `lead`) y el código lo copia a `TailoredCV`, como las
+  fechas o la empresa. El prompt pide que la primera frase del resumen
+  nombre el rol con ese nivel y que no mencione otro. El código avisa en
+  `warnings` si el resumen no lo nombra o si menciona un nivel distinto.
+  En la misma revisión del prompt, la tabla de niveles de skill pasa a
+  tener su versión en inglés y se prohíben los pronombres en todo el CV.
+- **Contexto:** con la oferta 2 (inglés, nivel `mid`), en dos de tres
+  ejecuciones Gemini quitó "Junior" del resumen para encajar mejor con la
+  oferta. Además, el nivel `beginner` salió con tres expresiones inglesas
+  distintas ("notions of", "foundational experience", "beginner's grasp")
+  y una ejecución usó "I am eager".
+- **Alternativas descartadas:**
+  - Solo una regla en el prompt: más barato, pero un "Junior" omitido no
+    daría ningún aviso.
+  - Que el resumen no mencione el nivel y solo salga en la cabecera:
+    Gemini podría seguir describiendo el rol sin "Junior", sin aviso.
+  - Un tipo `Seniority` compartido con `ExtractedOffer`: la oferta necesita
+    además `unspecified`, y la unión de enums complica el esquema que se
+    envía a Gemini (decisión 004). Se repite la lista de valores.
+  - Añadir al regex las variantes con tilde (`s[eé]nior`): hay que
+    acordarse de cada una. Quitar las tildes con `unicodedata` las cubre
+    todas.
+- **Motivo:** el nivel es un dato verificable, así que se protege con
+  código (decisión 007). Subirlo para encajar con una oferta es justo la
+  exageración que se nota en una entrevista. Con los mismos valores en
+  perfil y oferta, el matching del sprint 4 podrá compararlos directamente.
+- **Consecuencia:** en tres ejecuciones con la oferta 2, "Junior" apareció
+  siempre, `beginner` salió siempre como "basic knowledge of" y no hubo
+  pronombres ni avisos. Límites conocidos: "lead" usado como verbo en
+  inglés daría un falso aviso, y `intern` no se detecta en castellano
+  ("becaria"). Para un perfil `junior` no afectan.

@@ -31,11 +31,15 @@ No puedes:
 
 ## Nivel de las skills
 
-Cuando el resumen hable del nivel de una skill, usa solo la expresión que corresponde a su campo "level" en el perfil, o una equivalente en el idioma de la oferta:
+Cuando el resumen hable del nivel de una skill, usa solo la expresión que corresponde a su campo "level" en el perfil, en el idioma de la oferta:
 
-- beginner: "nociones de"
-- intermediate: "experiencia con"
-- advanced: "dominio de"
+| level | español | inglés |
+| --- | --- | --- |
+| beginner | "nociones de" | "basic knowledge of" |
+| intermediate | "experiencia con" | "experience with" |
+| advanced | "dominio de" | "strong command of" |
+
+En otro idioma, usa la traducción más literal de la expresión en español.
 
 Si dudas del nivel, no lo menciones: nombra la skill sin calificarla.
 
@@ -44,4 +48,9 @@ Si dudas del nivel, no lo menciones: nombra la skill sin calificarla.
 Todo el CV usa la misma voz, aunque el texto del perfil mezcle varias:
 
 - Resumen: frases nominales, sin verbos conjugados ("Ingeniera junior de datos con experiencia en..."). Nunca en tercera persona ("posee", "busca", "es").
+- En ningún idioma ni en ninguna parte del CV uses pronombres personales ni posesivos (yo, mi, I, my, me).
+
+## Seniority
+
+El campo "seniority" del perfil es el nivel de la persona y no se cambia. La primera frase del resumen nombra el rol con ese nivel, en su forma habitual en el idioma de la oferta ("Ingeniera junior de datos...", "Junior Data Engineer..."). No lo omitas ni lo subas aunque la oferta pida otro nivel, y no menciones ningún otro (junior, mid, senior, lead).
 - Logros: verbo en primera persona del pasado, sin pronombre ("Construí", "Migré"). En inglés, verbo en pasado sin pronombre ("Built", "Migrated").

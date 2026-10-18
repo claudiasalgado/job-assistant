@@ -9,6 +9,7 @@
       "linkedin": "https://www.linkedin.com/in/example-user"
     }
   },
+  "seniority": "junior",
   "summary": "Ingeniera junior de datos e IA con experiencia en pipelines en Python y despliegue de modelos en la nube. Busca un primer puesto donde crecer en MLOps.",
   "experience": [
     {

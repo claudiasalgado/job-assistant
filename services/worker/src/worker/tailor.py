@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import unicodedata
 from pathlib import Path
 
 from core.models import (
@@ -18,6 +19,9 @@ PROMPT_PATH = Path(__file__).parent / "prompts" / "tailor_cv.md"
 
 # Enteros y decimales con punto o coma: "3", "80", "0,86", "1.000"
 NUMBER_RE = re.compile(r"\d+(?:[.,]\d+)*")
+
+# Palabras de nivel que pueden aparecer en el resumen, en palabras completas
+SENIORITY_RE = re.compile(r"\b(intern|junior|mid|senior|lead)\b")
 
 
 def tailor_cv(
@@ -56,6 +60,13 @@ def tailor_cv(
 def _numbers(text: str) -> set[str]:
     """Cifras de un texto, normalizadas para que "0,86" y "0.86" cuenten igual."""
     return {n.replace(",", ".") for n in NUMBER_RE.findall(text)}
+
+
+def _seniority_words(text: str) -> set[str]:
+    """Niveles que menciona un texto, sin tildes para que "sénior" cuente como "senior"."""
+    decomposed = unicodedata.normalize("NFKD", text.casefold())
+    plain = "".join(c for c in decomposed if not unicodedata.combining(c))
+    return set(SENIORITY_RE.findall(plain))
 
 
 def build_tailored_cv(draft: TailoredCVDraft, profile: Profile, language: str) -> TailoredCV:
@@ -124,6 +135,13 @@ def build_tailored_cv(draft: TailoredCVDraft, profile: Profile, language: str) -
         if source_exp.id not in seen_experiences:
             warnings.append(f"Experiencia del perfil omitida por Gemini: {source_exp.id}")
 
+    # El nivel lo fija el perfil: el resumen debe nombrarlo y no mencionar otro (decisión 010)
+    levels = _seniority_words(draft.summary)
+    if profile.seniority not in levels:
+        warnings.append(f"El resumen no menciona el nivel del perfil ({profile.seniority})")
+    for level in sorted(levels - {profile.seniority}):
+        warnings.append(f"El resumen menciona un nivel distinto al del perfil: {level}")
+
     # Sin distinguir mayúsculas, pero siempre con el nombre tal y como está en el perfil
     skills_by_name = {s.name.casefold(): s for s in profile.skills}
     skills = []
@@ -137,6 +155,7 @@ def build_tailored_cv(draft: TailoredCVDraft, profile: Profile, language: str) -
     return TailoredCV(
         language=language,
         personal=profile.personal,
+        seniority=profile.seniority,
         summary=draft.summary,
         experience=experience,
         education=profile.education,
