@@ -61,3 +61,48 @@
 - **Consecuencia:** los datos inventados son más limpios que los reales y
   pueden ocultar fallos del extractor. Antes de cerrar el sprint 1 hay que
   probarlo con al menos una oferta real desde `data/private/`.
+
+## 004 · SDK `google-genai` y salida estructurada con esquema JSON
+
+- **Fecha:** 2026-10-18
+- **Decisión:** llamar a Gemini en Vertex AI con el SDK `google-genai`
+  (`enterprise=True`, autenticado con ADC) y obtener el JSON pasando la
+  clase Pydantic `ExtractedOffer` como `response_json_schema`. El resultado
+  se valida igualmente con Pydantic.
+- **Contexto:** el extractor convierte el texto libre de una oferta en un
+  JSON con forma fija que usan el adaptador de CV y, más adelante,
+  Firestore.
+- **Alternativas descartadas:**
+  - SDK `vertexai` (`GenerativeModel`): es el antiguo y está en retirada.
+  - Pedir JSON en el prompt, parsear y reintentar: portable entre LLMs,
+    pero con más fallos (bloques de código, campos inventados) y con
+    reintentos que escribir y mantener.
+- **Motivo:** con un esquema JSON Gemini restringe la generación a él, así que casi siempre devuelve JSON válido. Las `description` de
+  cada campo actúan como instrucciones. Con ADC no hay API keys que
+  guardar ni rotar.
+- **Consecuencia:** acoplamiento a Gemini y a su subconjunto de JSON Schema
+  (por eso el modelo usa tipos simples: `Literal`, `str | None`, listas de
+  `str`). Cambiar de proveedor obligaría a rehacer esta capa. La versión
+  del modelo va en una variable de entorno, no en el código.
+
+## 005 · Región `europe-west4` y modelo `gemini-2.5-flash`
+
+- **Fecha:** 2026-10-18
+- **Decisión:** llamar a Vertex AI en `europe-west4` con `gemini-2.5-flash`.
+  Región y modelo se configuran por variables de entorno
+  (`GOOGLE_CLOUD_LOCATION`, `GEMINI_MODEL`).
+- **Contexto:** a partir del adaptador de CV se enviarán a Gemini datos
+  personales (el perfil), así que importa dónde se procesan. En
+  `europe-west4` el proyecto no tenía acceso a `gemini-3.8-flash` (404);
+  consultando la API, la región solo ofrecía la familia 2.5.
+- **Alternativas descartadas:**
+  - `global` con `gemini-3.8-flash`: funciona y es más moderno, pero no se
+    controla dónde se procesan los datos.
+  - Otras regiones de la UE: no exploradas.
+- **Motivo:** procesamiento en la UE. En la oferta 1, `gemini-2.5-flash`
+  dio exactamente el mismo resultado que `gemini-3.8-flash`. La oferta 2
+  solo se probó con 2.5, con un resultado correcto tras ajustar el prompt.
+- **Consecuencia:** una generación de modelo anterior, que se retirará
+  antes. La equivalencia de calidad se ha visto en una oferta y una
+  ejecución, no se ha medido. Revisar cuando los modelos 3.x lleguen a la
+  UE. Cambiar de modelo o región es una línea del `.env`.
