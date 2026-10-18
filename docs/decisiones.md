@@ -134,6 +134,9 @@
 ## 007 · Validar en código el CV que propone Gemini y descartar lo no verificable
 
 - **Fecha:** 2026-10-18
+- **Estado:** la decisión 013 cambia qué se hace con un logro cuyas cifras
+  no coinciden: vuelve al texto original en vez de descartarse. El resto
+  sigue vigente.
 - **Decisión:** Gemini solo devuelve un borrador (`TailoredCVDraft`) con
   textos e ids. El código (`build_tailored_cv`) lo comprueba contra el
   perfil y descarta, con un aviso en `warnings`:
@@ -364,3 +367,33 @@
   worker tendrá que instalar pango y será más pesada. Al extraer el texto
   del PDF, las viñetas aparecen agrupadas al final: pendiente de revisar con
   el test de pdfplumber.
+
+## 013 · Un logro con las cifras cambiadas vuelve a su texto original
+
+- **Fecha:** 2026-10-18
+- **Decisión:** si la versión adaptada de un logro no tiene las mismas
+  cifras que el original, el CV usa el texto original del perfil y lo
+  anota en `warnings`, en vez de descartar el logro. El prompt aclara que
+  al acortar un logro no se puede quitar ninguna cifra.
+- **Contexto:** con la oferta 2 y el perfil en castellano, Gemini acortó
+  los dos logros con datos medibles ("de 3 horas a 20 minutos", "F1 del
+  0,86") quitándoles las cifras. La validación los descartó según la
+  decisión 007, y el CV perdió justo los dos mejores logros. La beca se
+  quedó sin ninguno. El prompt permitía "acortar" y prohibía "cambiar"
+  cifras, pero no decía que quitarlas también es cambiarlas.
+- **Alternativas descartadas:**
+  - Solo aclarar el prompt: si Gemini lo vuelve a hacer, el logro se
+    sigue perdiendo.
+  - Mantener el descarte: en la 007 era lo correcto porque el texto
+    original podía estar en otro idioma, pero desde la 011 el perfil está
+    siempre en el idioma del CV, así que ese motivo ya no existe.
+  - Reintentar con Gemini: sigue en el roadmap. El texto original es un
+    respaldo más barato e igual de seguro.
+- **Motivo:** el texto original lo escribió la persona, así que es por
+  definición correcto y está en el idioma del CV. Se pierde la adaptación
+  de un punto, nunca el logro ni la veracidad.
+- **Consecuencia:** una cifra inventada tampoco llega nunca al PDF,
+  porque el logro vuelve al original. Probado sin Gemini (una cifra quitada
+  y una inventada vuelven al original con aviso) y con Gemini (dos
+  ejecuciones con la oferta 2 en castellano, ya con el prompt aclarado,
+  sin cifras perdidas ni avisos).

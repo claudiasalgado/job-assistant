@@ -78,8 +78,9 @@ def _seniority_words(text: str) -> set[str]:
 def build_tailored_cv(draft: TailoredCVDraft, profile: Profile) -> TailoredCV:
     """Valida el borrador contra el perfil y monta el CV final.
 
-    Todo lo que no se puede verificar en el perfil se descarta y queda
-    anotado en warnings (decisión 007).
+    Lo que no existe en el perfil se descarta (decisión 007); un logro con
+    las cifras cambiadas vuelve a su texto original (decisión 013). Todo
+    queda anotado en warnings.
     """
     warnings: list[str] = []
     experiences_by_id = {e.id: e for e in profile.experience}
@@ -108,17 +109,19 @@ def build_tailored_cv(draft: TailoredCVDraft, profile: Profile) -> TailoredCV:
                 continue
             if original.id in seen_achievements:
                 continue
-            if _numbers(draft_ach.text) != _numbers(original.text):
-                warnings.append(
-                    f"Logro descartado: {original.id} cambia las cifras del original "
-                    f"({draft_ach.text!r})"
-                )
-                continue
             seen_achievements.add(original.id)
-            achievements.append(
-                TailoredAchievement(
-                    source_id=original.id, text=draft_ach.text, original_text=original.text
+
+            text = draft_ach.text
+            # El perfil está en el idioma del CV, así que el original siempre es
+            # un respaldo válido: se pierde la adaptación, nunca el logro (decisión 013)
+            if _numbers(text) != _numbers(original.text):
+                warnings.append(
+                    f"Logro {original.id} con el texto original: la versión adaptada "
+                    f"cambiaba sus cifras ({text!r})"
                 )
+                text = original.text
+            achievements.append(
+                TailoredAchievement(source_id=original.id, text=text, original_text=original.text)
             )
 
         if not achievements:

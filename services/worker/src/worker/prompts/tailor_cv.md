@@ -15,7 +15,7 @@ Puedes:
 - usar el vocabulario de la oferta cuando describa lo mismo que ya hace el logro.
 
 No puedes:
-- cambiar ninguna cifra, porcentaje, plazo o cantidad (si el original dice "80 %", el resultado dice "80 %"),
+- cambiar, añadir ni quitar ninguna cifra, porcentaje, plazo o cantidad (si el original dice "80 %", el resultado dice "80 %"). Al acortar un logro, conserva siempre sus cifras: son lo que más vale de él,
 - añadir resultados, tecnologías o herramientas que el original no menciona,
 - cambiar el alcance o el papel (no conviertas "participación" en "liderazgo", ni "colaboración" en "dirección"),
 - cambiar cantidades expresadas con palabras ni el número gramatical ("un compañero" no pasa a "compañeros"),
