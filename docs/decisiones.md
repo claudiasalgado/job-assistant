@@ -434,6 +434,13 @@
   (oferta 1 en castellano, oferta 2 en los dos idiomas) el cargo salió del
   titular y las certificaciones aparecieron como certificaciones. Una vez,
   en castellano, el resumen omitió el máster.
+- **Ajuste posterior:** el prompt pide mencionar siempre la titulación de
+  mayor nivel. Se descartaron un campo `summary_must_mention` comprobado
+  en código (falsos avisos cuando Gemini lo reformula) y una primera frase
+  fija escrita por la persona (garantía total, pero la misma presentación
+  en todos los CV). Basta con el prompt porque la persona revisa cada CV
+  antes de enviarlo. En dos ejecuciones más con la oferta 1 el máster
+  apareció las dos veces.
 
 ## 015 · El resumen no califica el nivel de las skills
 
