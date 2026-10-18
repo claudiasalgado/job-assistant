@@ -130,3 +130,75 @@
   determinista (el cálculo en GPU varía un poco), así que la salida es muy
   estable pero no idéntica siempre. No se aplica al adaptador de CV ni a
   la carta, donde algo de variedad al redactar sí aporta.
+
+## 007 · Validar en código el CV que propone Gemini y descartar lo no verificable
+
+- **Fecha:** 2026-10-18
+- **Decisión:** Gemini solo devuelve un borrador (`TailoredCVDraft`) con
+  textos e ids. El código (`build_tailored_cv`) lo comprueba contra el
+  perfil y descarta, con un aviso en `warnings`:
+  - experiencias cuyo `experience_id` no existe,
+  - logros cuyo `source_id` no existe o es de otra experiencia,
+  - logros cuyas cifras no coinciden con las del original (se comparan los
+    conjuntos de números, normalizando coma y punto decimal),
+  - skills que no están en el perfil (comparadas sin distinguir mayúsculas
+    y mostradas siempre con el nombre del perfil).
+  Empresas, cargos, fechas y datos personales los pone el código, nunca
+  Gemini. Los datos personales no se envían a Gemini.
+- **Contexto:** el prompt prohíbe inventar, pero un prompt es una petición,
+  no una garantía. El esquema JSON asegura la forma de la respuesta, no
+  que los ids o las cifras sean verdad.
+- **Alternativas descartadas:**
+  - Ante cifras cambiadas, volver al texto original: el CV podría salir con
+    dos idiomas.
+  - Ante cifras cambiadas, conservar el texto con un aviso: la cifra
+    inventada llegaría al PDF.
+  - Reintentar con Gemini explicándole el error: más coste, más latencia y
+    más código. Queda en el roadmap si se descartan demasiados logros.
+  - Comparar skills exactamente: "python" frente a "Python" se descartaría
+    sin motivo.
+  - Validar con validadores de Pydantic: mezcla la forma de los datos con
+    las reglas de negocio y es más difícil de testear.
+- **Motivo:** prefiero un CV con un punto menos que uno con un dato falso.
+  La validación es una función pura, así que se prueba sin llamar a Gemini.
+- **Consecuencia:** solo protege lo verificable (ids, cifras, skills). El
+  resumen y los matices de redacción no se pueden comprobar con código: los
+  cubre el prompt (decisión 008) y la revisión humana antes de enviar cada
+  CV. Límites conocidos: una cifra escrita con palabras ("tres" frente a
+  "3") cuenta como cambio, y la validación no detecta lo que el borrador
+  omite, solo lo que incluye. Un LLM como juez queda en el roadmap.
+
+## 008 · Voz única y niveles de skill fijos en el CV adaptado
+
+- **Fecha:** 2026-10-18
+- **Decisión:** el prompt del adaptador fija:
+  - la voz: resumen en frases nominales, sin verbos conjugados, y logros
+    en primera persona del pasado sin pronombre ("Construí"; en inglés,
+    "Built"). Nunca tercera persona;
+  - el nivel de cada skill con una expresión fija según su `level` en el
+    perfil: `beginner` → "nociones de", `intermediate` → "experiencia
+    con", `advanced` → "dominio de";
+  - la prohibición de añadir valoraciones ("clave", "sólido"), de cambiar
+    cantidades escritas con palabras o el número gramatical, y de copiar
+    las expresiones de nivel de la oferta.
+- **Contexto:** en la primera prueba con la oferta 1 la validación no dio
+  ningún aviso, pero el resumen decía "habilidades sólidas en SQL" (en el
+  perfil, `intermediate`, copiado del "buen nivel de SQL" de la oferta),
+  mezclaba tercera persona en el resumen con primera en los logros y un
+  logro ganó un "clave" que no estaba en el original.
+- **Alternativas descartadas:**
+  - Pedir "no exageres": subjetivo, cada ejecución lo interpreta distinto
+    y no se puede comprobar.
+  - No enviar el `level` a Gemini: más seguro, pero el resumen sería más
+    pobre y Gemini perdería información para ordenar las skills.
+  - Un LLM como juez que revise el resumen: más coste y latencia, y el
+    juez también se equivoca. Para un solo usuario que revisa cada CV no
+    compensa todavía.
+- **Motivo:** las frases nominales son lo habitual en el resumen de un CV
+  en castellano y, al no tener persona gramatical, no chocan con los logros
+  en primera persona. Una tabla fija de niveles se puede comprobar, y en el
+  futuro incluso con código.
+- **Consecuencia:** en la segunda prueba la voz y los niveles salieron
+  bien, pero siguió apareciendo "especializada en", y el modelo omitió una
+  experiencia entera (pendiente de decidir). Visto en una oferta y una
+  ejecución; falta probar con la oferta 2.
