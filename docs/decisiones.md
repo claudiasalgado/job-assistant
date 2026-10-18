@@ -199,6 +199,40 @@
   en primera persona. Una tabla fija de niveles se puede comprobar, y en el
   futuro incluso con código.
 - **Consecuencia:** en la segunda prueba la voz y los niveles salieron
-  bien, pero siguió apareciendo "especializada en", y el modelo omitió una
-  experiencia entera (pendiente de decidir). Visto en una oferta y una
-  ejecución; falta probar con la oferta 2.
+  bien, pero siguió apareciendo "especializada en" (se prohibió
+  explícitamente después) y el modelo omitió una experiencia entera (ver
+  decisión 009). Falta probar con la oferta 2.
+
+## 009 · El CV adaptado incluye siempre todas las experiencias
+
+- **Fecha:** 2026-10-18
+- **Decisión:** el prompt pide a Gemini incluir siempre todas las
+  experiencias del perfil, ordenadas por relevancia. Lo que adapta es qué
+  logros muestra de cada una, no qué experiencias. Si aun así falta
+  alguna, el código lo anota en `warnings`, pero no la añade.
+- **Contexto:** en una prueba con la oferta 1, Gemini quitó entera la beca
+  de investigación por considerarla poco relevante. El CV se quedaba con
+  una sola experiencia y un hueco de seis meses, y la validación no avisaba
+  porque solo comprueba lo que el borrador incluye.
+- **Alternativas descartadas:**
+  - Que el código añada las experiencias que falten con sus logros
+    originales: garantiza que estén todas, pero si la oferta está en otro
+    idioma esos logros saldrían sin traducir.
+  - Dejar que Gemini decida y solo avisar: con mucha trayectoria es lo
+    habitual, pero con un perfil junior quitar una experiencia siempre
+    resta.
+  - Que Gemini elija solo logros y el código ponga las experiencias:
+    obligaría a cambiar `TailoredCVDraft` y Gemini dejaría de ordenarlas.
+- **Motivo:** con una a tres experiencias, ninguna sobra. El aviso deja ver
+  el fallo sin volver al problema del idioma.
+- **Consecuencia:** en tres ejecuciones seguidas con la oferta 1 se
+  incluyeron las dos experiencias, sin avisos y sin "especializada". Pero
+  en cada ejecución se coló un fallo distinto en el texto libre, que la
+  validación no detecta: una tarea copiada de la oferta como si fuera
+  propia ("modelado de tablas en BigQuery"), un nivel mal traducido
+  (Google Cloud Platform, `beginner`, como "experiencia con") y una
+  cantidad perdida ("tres informes" pasó a "informes"). Confirma la
+  decisión 007: el texto libre depende de la revisión humana. Si se repite,
+  candidatos para el futuro: comprobar en código la tabla de niveles,
+  bajar la temperatura del adaptador o el LLM como juez. Si la lista de
+  experiencias crece, se puede pasar a dejar que Gemini decida.

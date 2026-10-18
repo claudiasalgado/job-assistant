@@ -25,9 +25,9 @@ No puedes:
 ## Qué incluir
 
 - Idioma: escribe el resumen y los logros en el idioma de la oferta (campo "language" de "offer"). Los nombres propios y las tecnologías no se traducen.
-- Experiencias: incluye las relevantes para la oferta, de más a menos relevante. Por cada una, elige entre uno y tres logros, también ordenados por relevancia. Omite los que no aportan a esta oferta.
+- Experiencias: incluye siempre todas las del perfil, aunque alguna parezca poco relevante para la oferta, ordenadas de más a menos relevante. Por cada una, elige entre uno y tres logros, también ordenados por relevancia, y omite los que no aportan a esta oferta. Lo que adaptas es qué logros se muestran, no qué experiencias.
 - Skills: devuelve solo nombres que aparezcan en el perfil, escritos exactamente igual. Pon primero las que la oferta pide como obligatorias, luego las deseables y, al final, otras del perfil solo si son relevantes. Que la oferta pida una skill no es motivo para incluirla si el perfil no la tiene.
-- Resumen: dos o tres frases basadas en el perfil y orientadas a la oferta. No afirmes más experiencia ni más nivel del que muestra el perfil, y no menciones el nombre de la empresa de la oferta. No copies las expresiones de nivel de la oferta ("buen nivel", "dominio"): el nivel lo marca el perfil.
+- Resumen: dos o tres frases basadas en el perfil y orientadas a la oferta. No afirmes más experiencia ni más nivel del que muestra el perfil, y no menciones el nombre de la empresa de la oferta. No copies las expresiones de nivel de la oferta ("buen nivel", "dominio"): el nivel lo marca el perfil. No afirmes especialización ni pericia ("especializada en", "experta en", "amplia experiencia"): describe lo que se ha hecho, no el grado de pericia.
 
 ## Nivel de las skills
 

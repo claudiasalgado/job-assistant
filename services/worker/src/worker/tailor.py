@@ -119,6 +119,11 @@ def build_tailored_cv(draft: TailoredCVDraft, profile: Profile, language: str) -
             )
         )
 
+    # El prompt pide incluirlas todas (decisión 009): solo se avisa, no se añaden
+    for source_exp in profile.experience:
+        if source_exp.id not in seen_experiences:
+            warnings.append(f"Experiencia del perfil omitida por Gemini: {source_exp.id}")
+
     # Sin distinguir mayúsculas, pero siempre con el nombre tal y como está en el perfil
     skills_by_name = {s.name.casefold(): s for s in profile.skills}
     skills = []
