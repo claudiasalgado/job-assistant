@@ -1,0 +1,35 @@
+# Tests en cada push y en cada pull request. No tocan GCP ni Gemini (decisión 024).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Solo lectura del repo: el job de tests no necesita escribir nada
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      # Las mismas librerías de sistema que la imagen del worker: sin ellas, los
+      # tests del PDF se saltarían en vez de ejecutarse
+      - name: Instalar pango para WeasyPrint
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0
+
+      # Misma versión de uv que en local y en los Dockerfiles; Python sale de .python-version
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.1"
+          enable-cache: true
+
+      # --frozen: si el uv.lock no está al día con los pyproject, falla en vez de corregirlo
+      - name: Instalar dependencias
+        run: uv sync --all-packages --frozen
+
+      - name: Tests
+        run: uv run --all-packages pytest -v

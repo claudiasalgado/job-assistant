@@ -93,6 +93,18 @@ class ProfileRepository:
         return sorted(b.name.removeprefix(f"{PROFILES_PREFIX}/profile.").removesuffix(".json") for b in blobs)
 
 
+def can_claim(task: Task, now: datetime) -> bool:
+    """La regla de claim, aparte de la transacción para poder probarla sin Firestore.
+
+    Sí: queued, failed o running abandonado (lease vencido). No: done o running reciente.
+    """
+    if task.state == "done":
+        return False
+    if task.state == "running" and now - task.updated_at < RUNNING_LEASE:
+        return False
+    return True
+
+
 class TaskRepository:
     """Estado de los trabajos asíncronos en Firestore: tasks/{id}."""
 
@@ -132,9 +144,7 @@ class TaskRepository:
             task = Task.model_validate({**snapshot.to_dict(), "id": task_id})
 
             now = datetime.now(UTC)
-            if task.state == "done":
-                return None
-            if task.state == "running" and now - task.updated_at < RUNNING_LEASE:
+            if not can_claim(task, now):
                 return None
 
             changes = {"state": "running", "attempts": task.attempts + 1, "error": None, "updated_at": now}

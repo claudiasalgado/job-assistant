@@ -799,3 +799,45 @@
   prueba de una candidatura de ejemplo (Nubelia Analytics). Probado en la
   nube: oferta 2 con encaje 53 (gaps: Kubernetes y Terraform); `created` y
   `status_changed` llegaron a BigQuery en unos 2 s.
+
+## 024 · Tests con dobles en memoria, CI en GitHub Actions y logs en JSON
+
+- **Fecha:** 2026-10-20
+- **Decisión:**
+  - Tests con pytest en `tests/` que no llaman a GCP ni a Gemini. La
+    lógica de verdad se prueba como funciones puras (`build_tailored_cv`,
+    `build_skill_match`, `can_claim`, `render_html`). Los endpoints se
+    prueban con dobles en memoria inyectados con
+    `app.dependency_overrides`, y Gemini con un cliente falso que solo
+    captura lo que se le envía. Los tests del PDF se saltan si la máquina
+    no tiene pango.
+  - La regla de `claim` sale de la transacción a `can_claim(task, now)`,
+    que la transacción sigue usando.
+  - GitHub Actions ejecuta los tests en cada push y pull request, con pango
+    instalado, la misma versión de uv y `uv sync --frozen`.
+  - El worker escribe los logs en JSON con `severity` y los campos
+    `task_id`, `application_id` y `attempt` (`core.logs`). Cloud Run los
+    convierte en logs estructurados.
+- **Contexto:** el sprint 5 pide tests ejecutados por el CI y logs
+  estructurados. Varias piezas ya estaban pensadas para probarse sin GCP
+  (decisiones 007, 017 y 023).
+- **Alternativas descartadas:**
+  - Emulador de Firestore para probar la transacción: prueba más de verdad,
+    pero necesita Java y un proceso aparte en el CI. La transacción se probó
+    una vez contra Firestore real; lo que puede romperse al tocar el código
+    es la regla.
+  - `unittest.mock` para los repositorios: menos código, pero los dobles
+    explícitos dejan ver qué hace cada uno y fallan si cambia la interfaz.
+  - Tests que llaman a Gemini: dan confianza en los prompts, pero cuestan
+    dinero y no son deterministas. Para los prompts sigue la revisión humana
+    de cada CV.
+  - La librería `google-cloud-logging`: añade una dependencia y una
+    conexión; Cloud Run ya entiende JSON en stdout.
+- **Motivo:** tests rápidos (unos 3 s), gratis y deterministas, que el CI
+  puede ejecutar en cada cambio.
+- **Consecuencia:** un detalle de FastAPI que costó un fallo: un override
+  escrito como `lambda fake=fake: fake` hace que FastAPI tome `fake` por un
+  parámetro de la petición y pase una copia, así que los dobles deben ser
+  funciones sin parámetros (`returns` en `conftest.py`). En el repo, el
+  email de la persona ya no se escribe en `infra/iam-api.sh`: se lee de la
+  cuenta activa de gcloud.

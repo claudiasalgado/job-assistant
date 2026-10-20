@@ -26,7 +26,8 @@ echo "Permisos concedidos a $MEMBER"
 # --- IAP delante del servicio api (decisión 020) ---
 PROJECT_NUMBER=333565578201
 REGION=europe-west4
-USER_EMAIL=TU_EMAIL
+# La cuenta con la que se ejecuta el script: así el email no queda escrito en el repo
+USER_EMAIL=$(gcloud config get-value account 2>/dev/null)
 
 # El agente de IAP es quien llama de verdad a Cloud Run, así que necesita ser invoker
 gcloud run services add-iam-policy-binding api --project="$PROJECT" --region="$REGION" \

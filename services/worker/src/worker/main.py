@@ -10,6 +10,7 @@ from functools import cache
 from typing import Annotated
 
 from core.events import EventPublisher
+from core.logs import setup_logging
 from core.models import Application, Task, TaskMessage
 from core.repository import ApplicationRepository, ProfileRepository, TaskRepository
 from fastapi import Depends, FastAPI, Response
@@ -20,8 +21,9 @@ from worker.matcher import match_skills
 from worker.render import CVTooLongError, fit_to_one_page, render_pdf
 from worker.tailor import tailor_cv
 
-# Cloud Run manda a Cloud Logging todo lo que se escribe en stdout/stderr
-logging.basicConfig(level=logging.INFO)
+# Cloud Run manda a Cloud Logging todo lo que se escribe en stdout/stderr; en JSON,
+# cada línea es un log estructurado que se puede filtrar por task_id
+setup_logging()
 logger = logging.getLogger("worker")
 
 app = FastAPI(title="job-assistant-worker")
@@ -88,32 +90,33 @@ def handle_push(
 
     task = tasks.claim(message.task_id)
     if task is None:
-        logger.info("Task %s: ya hecho, en marcha o inexistente", message.task_id)
+        logger.info("Task ya hecho, en marcha o inexistente", extra={"task_id": message.task_id})
         return DONE
 
-    logger.info("Task %s: intento %d", task.id, task.attempts)
+    context = {"task_id": task.id, "application_id": task.application_id, "attempt": task.attempts}
+    logger.info("Task empezado", extra=context)
     try:
         application = _generate_cv(task, applications, profiles)
     except PermanentError as error:
         tasks.fail(task.id, str(error))
-        logger.warning("Task %s: fallo permanente: %s", task.id, error)
+        logger.warning("Fallo permanente: %s", error, extra=context)
         return DONE
     except Exception as error:
         # Cualquier otra cosa (Gemini, red, Firestore...) puede ir bien la próxima vez:
         # el task vuelve a queued (no failed) para que el frontend sepa que se reintentará
         tasks.retry_later(task.id, f"{type(error).__name__}: {error}")
-        logger.exception("Task %s: fallo, Pub/Sub lo reintentará", task.id)
+        logger.exception("Fallo transitorio, Pub/Sub lo reintentará", extra=context)
         return RETRY
 
     tasks.finish(task.id)
-    logger.info("Task %s: hecho, candidatura %s", task.id, task.application_id)
+    logger.info("Task hecho", extra=context)
 
     # La analítica es secundaria: si falla, se pierde una fila de BigQuery, pero no
     # se reintenta el task (otra llamada a Gemini y otro CV) por un evento
     try:
         events.created(application)
     except Exception:
-        logger.exception("Task %s: no se pudo publicar el evento created", task.id)
+        logger.exception("No se pudo publicar el evento created", extra=context)
     return DONE
 
 
