@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Job Assistant</title>
+  <style>
+    :root { --bg: #fafafa; --fg: #1a1a1a; --muted: #666; --card: #fff; --border: #ddd; --accent: #2563eb; --warn: #b45309; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #111; --fg: #eee; --muted: #999; --card: #1b1b1b; --border: #333; --accent: #60a5fa; --warn: #fbbf24; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-serif; }
+    main { max-width: 720px; margin: 0 auto; padding: 24px 16px; }
+    h1 { font-size: 1.5rem; margin: 0 0 16px; }
+    textarea, select, button { font: inherit; color: inherit; }
+    textarea { width: 100%; min-height: 280px; padding: 12px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; resize: vertical; }
+    .row { display: flex; gap: 12px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+    select { padding: 8px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; }
+    button { padding: 8px 20px; background: var(--accent); color: #fff; border: 0; border-radius: 8px; cursor: pointer; }
+    button:disabled { opacity: .6; cursor: wait; }
+    #status { color: var(--muted); }
+    #result { margin-top: 24px; padding: 16px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; }
+    #result[hidden] { display: none; }
+    #result h2 { font-size: 1.1rem; margin: 0 0 8px; }
+    .warn { color: var(--warn); }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Job Assistant</h1>
+    <form id="form">
+      <label for="offer">Pega aquí la oferta</label>
+      <textarea id="offer" required minlength="50" maxlength="20000"></textarea>
+      <div class="row">
+        <label for="language">Idioma del CV</label>
+        <select id="language">
+          <option value="">El de la oferta</option>
+          <option value="es">Castellano</option>
+          <option value="en">Inglés</option>
+        </select>
+        <button id="submit" type="submit">Generar CV</button>
+        <span id="status" role="status"></span>
+      </div>
+    </form>
+
+    <section id="result" hidden>
+      <h2 id="title"></h2>
+      <p id="meta"></p>
+      <ul id="warnings" class="warn"></ul>
+      <a id="pdf" target="_blank">Abrir el CV en PDF</a>
+    </section>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    $("form").addEventListener("submit", async (event) => {
+      // Sin esto el navegador recargaría la página al enviar el formulario
+      event.preventDefault();
+      $("submit").disabled = true;
+      $("result").hidden = true;
+      $("status").textContent = "Generando… (unos 20 segundos)";
+
+      try {
+        // Ruta relativa: misma URL que la página, así no hay CORS y viaja la cookie de IAP
+        const response = await fetch("applications", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            offer_text: $("offer").value,
+            language: $("language").value || null,
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(formatError(data.detail));
+        showResult(data);
+        $("status").textContent = "";
+      } catch (error) {
+        $("status").textContent = `Error: ${error.message}`;
+      } finally {
+        $("submit").disabled = false;
+      }
+    });
+
+    function showResult(app) {
+      const offer = app.extracted;
+      // textContent y no innerHTML: el texto viene de Gemini y de la oferta, nunca se interpreta como HTML
+      $("title").textContent = [offer.title, offer.company].filter(Boolean).join(" · ");
+      $("meta").textContent = [offer.location, offer.modality, offer.seniority, `CV en ${app.language}`].filter(Boolean).join(" · ");
+      $("warnings").replaceChildren(...app.warnings.map((text) => {
+        const li = document.createElement("li");
+        li.textContent = text;
+        return li;
+      }));
+      $("pdf").href = app.cv_pdf_url.replace(/^\//, "");
+      $("result").hidden = false;
+    }
+
+    // FastAPI devuelve un texto (errores propios) o una lista (validación de Pydantic)
+    function formatError(detail) {
+      if (Array.isArray(detail)) return detail.map((d) => d.msg).join("; ");
+      return detail ?? "error desconocido";
+    }
+  </script>
+</body>
+</html>

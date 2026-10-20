@@ -1,0 +1,18 @@
+# Lo que gcloud NO sube a Cloud Build (gcloud builds submit, gcloud run deploy --source).
+# Sin este fichero gcloud usaría solo el .gitignore; aquí se hace explícito.
+
+# Todo lo que git ya ignora: .env, data/private/, .venv, cachés...
+#!include:.gitignore
+
+# Lo que está en git pero la imagen no necesita. La "/" inicial ancla a la raíz:
+# sin ella, README.md quitaría también los de cada paquete, que uv necesita al construirlos
+.git
+.gitignore
+.gcloudignore
+/data/
+/docs/
+/README.md
+
+# Ignorados por .git/info/exclude, que gcloud no lee
+/CLAUDE.md
+/.claude/

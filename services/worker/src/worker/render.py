@@ -68,14 +68,21 @@ def render_html(cv: TailoredCV) -> str:
     )
 
 
-def render_pdf(cv: TailoredCV, output: Path) -> Path:
-    """Genera el PDF con WeasyPrint, etiquetado como PDF/UA-1 para que lo lea bien un ATS."""
+def render_pdf(cv: TailoredCV, output: Path | None = None) -> bytes:
+    """Genera el PDF con WeasyPrint, etiquetado como PDF/UA-1 para que lo lea bien un ATS.
+
+    Devuelve los bytes del PDF. Si se pasa output, además lo escribe en disco
+    (lo usa el CLI; la api los sube a Cloud Storage sin pasar por disco).
+    """
     # Import aquí y no arriba: WeasyPrint carga librerías del sistema (pango) al importarse,
     # y así render_html funciona y se puede testear aunque no estén instaladas.
     from weasyprint import HTML
 
-    # base_url: desde dónde se resuelven styles.css y las fuentes
-    HTML(string=render_html(cv), base_url=str(TEMPLATES_DIR)).write_pdf(
-        output, pdf_variant="pdf/ua-1"
+    # base_url: desde dónde se resuelven styles.css y las fuentes.
+    # Sin destino, write_pdf devuelve los bytes en vez de escribir un fichero
+    pdf = HTML(string=render_html(cv), base_url=str(TEMPLATES_DIR)).write_pdf(
+        pdf_variant="pdf/ua-1"
     )
-    return output
+    if output:
+        output.write_bytes(pdf)
+    return pdf

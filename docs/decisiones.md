@@ -468,3 +468,184 @@
 - **Consecuencia:** en tres pruebas ningún resumen calificó niveles. En
   una apareció "con experiencia en Google Cloud Platform", que no está
   prohibido pero se acerca. Es texto libre: candidato para el juez LLM.
+
+## 016 · En el sprint 2, el servicio es `api` y usa `worker` como librería
+
+- **Fecha:** 2026-10-18
+- **Decisión:** el único servicio de Cloud Run del sprint 2 es el paquete
+  `api` (FastAPI). Depende del paquete `worker` del workspace y llama
+  directamente a `extract_offer`, `tailor_cv` y `render_pdf`, de forma
+  síncrona.
+- **Contexto:** la lógica del sprint 1 vive en `worker`. El plan pide un
+  solo servicio en el sprint 2 y partirlo en api y worker con Pub/Sub en
+  el sprint 3.
+- **Alternativas descartadas:**
+  - Mover extracción, adaptación y render a `core`: `core` cargaría con
+    google-genai y WeasyPrint, que la api no necesitará en el sprint 3, y
+    habría que deshacerlo.
+  - Poner FastAPI dentro de `worker`: lo más directo, pero en el sprint 3
+    habría que sacar de él las rutas de usuario y el frontend.
+- **Motivo:** la frontera entre api y worker ya existe en el código. En el
+  sprint 3, partir el servicio es cambiar la llamada directa por la
+  publicación de un mensaje y quitar la dependencia.
+- **Consecuencia:** mientras dure el sprint 2, la imagen de la api incluye
+  WeasyPrint y sus librerías de sistema, así que es más pesada y arranca
+  más lenta en frío. Se acepta porque es temporal.
+
+## 017 · Repositorio en `core` con Firestore y Cloud Storage
+
+- **Fecha:** 2026-10-19
+- **Decisión:** la api deja de guardar en disco. `ApplicationRepository`
+  (`packages/core/src/core/repository.py`) guarda cada candidatura como
+  documento `applications/{id}` en Firestore y sus ficheros (`offer.txt`,
+  `cv.pdf`) en el bucket `clau-job-assistant` bajo `applications/{id}/`. Los
+  dos recursos están en `europe-west4`. El documento es `Application`
+  (`core.models`) sin el `id`, que es el nombre del documento; las rutas de
+  GCS se deducen del id y no se guardan. La api sirve el PDF leyéndolo de
+  GCS. En local se trabaja contra los recursos reales con ADC.
+- **Contexto:** en Cloud Run el disco es efímero y no se comparte entre
+  instancias, así que el estado tiene que vivir fuera del contenedor. En el
+  sprint 3 el worker escribirá en las mismas colecciones.
+- **Alternativas descartadas:**
+  - Llamar a Firestore y GCS directamente desde `main.py`: el worker
+    duplicaría ese código y nada se podría probar sin GCP.
+  - Una interfaz con dos implementaciones (disco y GCP): se podría trabajar
+    sin conexión, pero son dos implementaciones que pueden comportarse
+    distinto y la de disco no se usaría en producción.
+  - URLs firmadas para el PDF: no cargan a la api, pero en Cloud Run la
+    service account necesita `roles/iam.serviceAccountTokenCreator` sobre sí
+    misma para firmar. Cambiarlo más adelante es tocar un endpoint.
+  - Bucket público: son datos personales. El bucket tiene
+    `public-access-prevention` y acceso uniforme por IAM.
+  - Emulador de Firestore en local: GCS no tiene emulador oficial, así que
+    solo cubría la mitad. Con este volumen los recursos reales cuestan 0 €.
+  - Guardar el PDF en Firestore: límite de 1 MiB por documento, y se pagaría
+    leer bytes que nunca se consultan.
+- **Motivo:** el código de acceso a datos se escribe una vez y lo comparten
+  api y worker. Los clientes se inyectan (constructor del repositorio y
+  `Depends` en FastAPI), así que un test puede sustituirlos sin tocar GCP.
+- **Consecuencia:** no hay transacción entre Firestore y GCS. Se escriben
+  primero los ficheros y el documento al final: si algo falla a medias
+  quedan ficheros huérfanos en el bucket, nunca un documento sin su PDF.
+  `created_at` se guarda como timestamp nativo (`model_dump` en modo Python,
+  no JSON). Los datos de prueba en local se mezclan con los reales.
+  `render_pdf` devuelve los bytes del PDF para no pasar por disco. Los
+  perfiles siguen leyéndose de `data/private/`, que no existe en Cloud Run:
+  hay que moverlos antes de desplegar. Probado de punta a punta con la
+  oferta 1 y el perfil de ejemplo: 201, documento con timestamp nativo y PDF
+  descargable.
+
+## 018 · Los perfiles viven en Cloud Storage como JSON
+
+- **Fecha:** 2026-10-19
+- **Decisión:** los perfiles se leen de
+  `gs://clau-job-assistant/profiles/profile.{idioma}.json` con
+  `ProfileRepository` (`core.repository`). Son los mismos ficheros que se
+  editan a mano en `data/private/` y se suben con `gcloud storage cp`. El
+  campo `language` de la petición se restringe a dos letras minúsculas
+  porque forma parte del nombre del objeto.
+- **Contexto:** la api los leía de `data/private/`, que no existe en Cloud
+  Run. El plan proponía un documento `profile/me` en Firestore, pero desde
+  la decisión 011 hay un perfil por idioma y se mantiene a mano como JSON.
+- **Alternativas descartadas:**
+  - Firestore (`profiles/{idioma}`): lo que decía el plan, y permite editar
+    campos desde la consola. Pero hace falta un script de sincronización y
+    habría dos fuentes de verdad (el JSON local y Firestore) que acabarían
+    divergiendo.
+  - Secret Manager: es para credenciales, no para documentos (límite de
+    64 KiB).
+  - Copiarlos en la imagen Docker: datos personales dentro de la imagen y
+    un redespliegue por cada cambio del CV.
+- **Motivo:** el perfil siempre se lee entero y nunca se consulta por
+  campo. Mismo criterio que la decisión 017: Firestore para lo que se
+  consulta, GCS para lo que se lee entero. Lo que se edita es exactamente
+  lo que se lee.
+- **Consecuencia:** al cambiar el CV hay que acordarse de volver a subir el
+  JSON; si no, la api usa la versión anterior sin avisar. Un perfil con un
+  error de formato no se detecta al subirlo, sino en la primera petición
+  (500 de validación de Pydantic). El CLI del sprint 1 sigue leyendo de
+  disco.
+
+## 019 · Imagen con uv, Cloud Build regional y Cloud Run privado con service account propia
+
+- **Fecha:** 2026-10-20
+- **Decisión:**
+  - `services/api/Dockerfile` sobre `python:3.12-slim-bookworm`, con pango
+    y harfbuzz instalados con apt, uv copiado de su imagen oficial (versión
+    fijada) y dos `uv sync`: primero las dependencias y luego el workspace.
+    El código se copia carpeta a carpeta y el proceso no corre como root.
+  - La imagen se construye en Cloud Build (`services/api/cloudbuild.yaml`)
+    en `europe-west4`, con buckets regionales, y se guarda en el
+    repositorio `job-assistant` de Artifact Registry. `.gcloudignore`
+    explícito.
+  - El servicio `api` de Cloud Run se ejecuta como `api-runtime`, con
+    `datastore.user` y `aiplatform.user` en el proyecto y
+    `storage.objectUser` solo en el bucket. Es privado
+    (`--no-allow-unauthenticated`), tiene un máximo de 2 instancias, 1 GiB
+    y escala a cero.
+  - Los comandos de IAM y despliegue viven en `infra/*.sh` hasta Terraform.
+- **Contexto:** primer despliegue del sprint 2. La imagen construida en el
+  Mac era `arm64` y Cloud Run ejecuta `amd64`. La service account por
+  defecto de Compute tiene `roles/editor` en el proyecto.
+- **Alternativas descartadas:**
+  - Alpine: imagen más pequeña, pero `musl` obliga a compilar wheels y
+    pango da guerra.
+  - Multi-stage build: algo más pequeña, pero lo que pesa es pango. Queda
+    como mejora.
+  - `docker build --platform linux/amd64` y push desde el Mac: emula amd64
+    (lento) y sube la imagen desde casa.
+  - `gcloud run deploy --source .`: un solo comando, pero usa buildpacks o
+    exige el Dockerfile en la raíz, y esconde los pasos.
+  - La service account por defecto: funciona sin configurar nada, pero con
+    `editor` un fallo en la api daría acceso a casi todo el proyecto.
+  - Servicio público con login propio, o Identity-Aware Proxy: más código
+    o más infraestructura para una sola usuaria. IAP queda para cuando haya
+    frontend en el navegador.
+  - `--min-instances=1`: sin arranque en frío, pero unos 10-15 € al mes.
+- **Motivo:** mínimo privilegio y nada de claves descargadas: el servicio
+  obtiene sus credenciales del metadata server. Todo en la UE. Los scripts
+  dejan versionado lo que Terraform tendrá que crear.
+- **Consecuencia:** sin token de Google la api responde 403 sin llegar al
+  código. Para probarla, `gcloud run services proxy` o
+  `curl` con `gcloud auth print-identity-token`. Probado: 403 sin token,
+  GET y PDF con 200, y un POST completo con la oferta 2 en unos 16 s
+  (incluye el arranque en frío). Pendientes: Cloud Build usa aún la cuenta
+  por defecto de Compute con `editor` (cuenta de build propia en el sprint
+  5); política de limpieza de imágenes en Artifact Registry; el tag
+  `latest` es mutable.
+
+## 020 · Identity-Aware Proxy integrado en Cloud Run, con cliente OAuth propio
+
+- **Fecha:** 2026-10-20
+- **Decisión:** el servicio `api` sigue privado (`--no-allow-unauthenticated`)
+  y tiene IAP activado (`--iap`). El agente de servicio de IAP tiene
+  `run.invoker` sobre el servicio y solo la cuenta de Clau tiene
+  `iap.httpsResourceAccessor`. El frontend lo sirve la propia api en `/`,
+  así que comparte origen con ella. Como el proyecto no tiene organización,
+  IAP usa un cliente OAuth propio (`IAP api`, tipo aplicación web), creado
+  a mano en la consola con la pantalla de consentimiento en modo External y
+  en pruebas, y aplicado con `gcloud iap settings set` a nivel de proyecto.
+- **Contexto:** con el servicio privado, el navegador no puede llamar a la
+  api porque no envía tokens de Google. El cliente OAuth gestionado por
+  Google solo admite usuarios de la misma organización, y en un proyecto
+  sin organización los clientes OAuth no se pueden crear por API. La opción
+  "Auto generate credentials" de la consola no apareció.
+- **Alternativas descartadas:**
+  - Seguir solo con `gcloud run services proxy`: sin configuración, pero
+    solo desde un ordenador con gcloud.
+  - Servicio público con login de Google verificado en FastAPI (Firebase
+    Auth): código de seguridad propio, y un fallo expondría los datos.
+  - Load balancer con IAP: la forma clásica, pero unos 18 $ al mes solo
+    por el balanceador.
+  - Frontend en un bucket o en Firebase Hosting: obliga a gestionar CORS y
+    un segundo origen para la cookie de IAP.
+- **Motivo:** login con Google sin escribir código de autenticación, sin
+  coste y con el acceso definido en IAM, como el resto del proyecto.
+- **Consecuencia:** sin sesión, la URL redirige (302) al login de Google.
+  Para que IAP funcione hizo falta habilitar también la API de Cloud
+  Resource Manager. El cliente OAuth no está en ningún script: Terraform
+  tampoco podrá crearlo en un proyecto sin organización. El client secret
+  pasó por el historial de la conversación con Claude: conviene rotarlo
+  (añadir un secret nuevo al cliente, aplicarlo y borrar el antiguo). Con
+  la app en modo pruebas solo entran los usuarios de prueba de la pantalla
+  de consentimiento.

@@ -1,0 +1,19 @@
+# Construye la imagen de la api en Cloud Build (linux/amd64, la arquitectura de Cloud Run)
+# y la sube a Artifact Registry. Se lanza desde la raíz del repo:
+#   gcloud builds submit --config=services/api/cloudbuild.yaml --region=europe-west4 .
+
+steps:
+  # El mismo docker build que en local: Dockerfile en services/api, contexto en la raíz
+  - name: gcr.io/cloud-builders/docker
+    args: ["build", "-f", "services/api/Dockerfile", "-t", "${_IMAGE}", "."]
+
+# Las imágenes de esta lista se suben al registro al acabar todos los pasos
+images: ["${_IMAGE}"]
+
+substitutions:
+  # Un único tag de momento; en el sprint 5 el CI etiquetará con el hash del commit
+  _IMAGE: europe-west4-docker.pkg.dev/${PROJECT_ID}/job-assistant/api:latest
+
+options:
+  # Necesario para que _IMAGE pueda usar ${PROJECT_ID} dentro de su valor
+  dynamicSubstitutions: true

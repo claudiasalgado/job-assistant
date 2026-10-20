@@ -9,6 +9,8 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "core",
+    "fastapi[standard]>=0.146.0",
+    "worker",
 ]
 
 [build-system]
@@ -17,3 +19,4 @@ build-backend = "uv_build"
 
 [tool.uv.sources]
 core = { workspace = true }
+worker = { workspace = true }

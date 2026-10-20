@@ -1,3 +1,5 @@
+import uuid
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -206,3 +208,21 @@ class TailoredCV(BaseModel):
     volunteering: list[Volunteering]
     projects: list[Project]
     warnings: list[str] = []
+
+
+# --- Candidatura: lo que se guarda en Firestore (applications/{id}) ---
+
+
+class Application(BaseModel):
+    """Una oferta y el CV generado para ella.
+
+    El id es el nombre del documento, no un campo dentro de él. Los ficheros
+    (offer.txt, cv.pdf) van en Cloud Storage bajo applications/{id}/, así que
+    sus rutas se deducen del id y no se guardan.
+    """
+
+    id: uuid.UUID
+    created_at: datetime
+    language: str
+    extracted: ExtractedOffer
+    warnings: list[str]
