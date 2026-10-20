@@ -17,6 +17,8 @@ wheels/
 # Claves y credenciales: cualquier JSON se ignora salvo los datos de ejemplo
 *.json
 !data/samples/**/*.json
+# Configuración de infraestructura (políticas, nunca credenciales)
+!infra/*.json
 
 # Datos personales reales (CV, ofertas, salarios)
 data/private/
