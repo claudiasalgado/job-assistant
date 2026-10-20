@@ -25,6 +25,12 @@
     #result h2 { font-size: 1.1rem; margin: 0 0 8px; }
     .warn { color: var(--warn); }
     a { color: var(--accent); }
+    h2.section { font-size: 1.2rem; margin: 40px 0 12px; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    td.wrap { white-space: normal; min-width: 180px; }
+    .score { font-variant-numeric: tabular-nums; }
   </style>
 </head>
 <body>
@@ -48,9 +54,18 @@
     <section id="result" hidden>
       <h2 id="title"></h2>
       <p id="meta"></p>
+      <p id="match"></p>
       <ul id="warnings" class="warn"></ul>
       <a id="pdf" target="_blank">Abrir el CV en PDF</a>
     </section>
+
+    <h2 class="section">Mis candidaturas</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Fecha</th><th>Puesto</th><th>Encaje</th><th>Estado</th><th>CV</th></tr></thead>
+        <tbody id="applications"></tbody>
+      </table>
+    </div>
   </main>
 
   <script>
@@ -77,6 +92,7 @@
         const done = await waitForTask(task.id);
         showResult(await request(`applications/${done.application_id}`));
         $("status").textContent = "";
+        loadApplications();
       } catch (error) {
         $("status").textContent = `Error: ${error.message}`;
       } finally {
@@ -120,9 +136,64 @@
         li.textContent = text;
         return li;
       }));
+      $("match").textContent = app.match
+        ? `Encaje ${app.match.score}/100` + (app.match.gaps.length ? ` · Te falta: ${app.match.gaps.join(", ")}` : "")
+        : "";
       $("pdf").href = app.cv_pdf_url.replace(/^\//, "");
       $("result").hidden = false;
     }
+
+    const STATUSES = {
+      cv_ready: "CV listo", applied: "Enviada", screening: "Primer filtro", interview: "Entrevistas",
+      offer: "Oferta", rejected: "Descartada", ghosted: "Sin respuesta",
+    };
+
+    // Panel de seguimiento: cada cambio de estado va a la api, que lo publica para BigQuery
+    async function loadApplications() {
+      const apps = await request("applications");
+      $("applications").replaceChildren(...apps.map((app) => {
+        const row = document.createElement("tr");
+        const cell = (text, className) => {
+          const td = document.createElement("td");
+          td.textContent = text;
+          if (className) td.className = className;
+          row.append(td);
+          return td;
+        };
+        cell(new Date(app.created_at).toLocaleDateString());
+        cell([app.extracted.title, app.extracted.company].filter(Boolean).join(" · "), "wrap");
+        cell(app.match ? app.match.score : "–", "score");
+
+        const select = document.createElement("select");
+        for (const [value, label] of Object.entries(STATUSES)) select.add(new Option(label, value, false, value === app.status));
+        select.addEventListener("change", async () => {
+          select.disabled = true;
+          try {
+            await request(`applications/${app.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ status: select.value }),
+            });
+          } catch (error) {
+            select.value = app.status;
+            alert(`No se pudo cambiar el estado: ${error.message}`);
+          } finally {
+            select.disabled = false;
+          }
+          app.status = select.value;
+        });
+        cell("").append(select);
+
+        const link = document.createElement("a");
+        link.href = app.cv_pdf_url.replace(/^\//, "");
+        link.target = "_blank";
+        link.textContent = "PDF";
+        cell("").append(link);
+        return row;
+      }));
+    }
+
+    loadApplications().catch((error) => { $("status").textContent = `Error: ${error.message}`; });
 
     // FastAPI devuelve un texto (errores propios) o una lista (validación de Pydantic)
     function formatError(detail) {

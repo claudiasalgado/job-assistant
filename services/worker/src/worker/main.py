@@ -9,12 +9,14 @@ import logging
 from functools import cache
 from typing import Annotated
 
+from core.events import EventPublisher
 from core.models import Application, Task, TaskMessage
 from core.repository import ApplicationRepository, ProfileRepository, TaskRepository
 from fastapi import Depends, FastAPI, Response
 from pydantic import BaseModel, Field, ValidationError
 
 from worker.extractor import extract_offer
+from worker.matcher import match_skills
 from worker.render import CVTooLongError, fit_to_one_page, render_pdf
 from worker.tailor import tailor_cv
 
@@ -40,9 +42,15 @@ def get_tasks() -> TaskRepository:
     return TaskRepository()
 
 
+@cache
+def get_events() -> EventPublisher:
+    return EventPublisher()
+
+
 Applications = Annotated[ApplicationRepository, Depends(get_applications)]
 Profiles = Annotated[ProfileRepository, Depends(get_profiles)]
 Tasks = Annotated[TaskRepository, Depends(get_tasks)]
+Events = Annotated[EventPublisher, Depends(get_events)]
 
 
 class PubSubMessage(BaseModel):
@@ -68,7 +76,9 @@ RETRY = Response(status_code=500)
 
 
 @app.post("/pubsub")
-def handle_push(envelope: PushEnvelope, applications: Applications, profiles: Profiles, tasks: Tasks) -> Response:
+def handle_push(
+    envelope: PushEnvelope, applications: Applications, profiles: Profiles, tasks: Tasks, events: Events
+) -> Response:
     try:
         message = TaskMessage.model_validate_json(base64.b64decode(envelope.message.data))
     except (ValueError, ValidationError):
@@ -83,7 +93,7 @@ def handle_push(envelope: PushEnvelope, applications: Applications, profiles: Pr
 
     logger.info("Task %s: intento %d", task.id, task.attempts)
     try:
-        _generate_cv(task, applications, profiles)
+        application = _generate_cv(task, applications, profiles)
     except PermanentError as error:
         tasks.fail(task.id, str(error))
         logger.warning("Task %s: fallo permanente: %s", task.id, error)
@@ -97,10 +107,17 @@ def handle_push(envelope: PushEnvelope, applications: Applications, profiles: Pr
 
     tasks.finish(task.id)
     logger.info("Task %s: hecho, candidatura %s", task.id, task.application_id)
+
+    # La analítica es secundaria: si falla, se pierde una fila de BigQuery, pero no
+    # se reintenta el task (otra llamada a Gemini y otro CV) por un evento
+    try:
+        events.created(application)
+    except Exception:
+        logger.exception("Task %s: no se pudo publicar el evento created", task.id)
     return DONE
 
 
-def _generate_cv(task: Task, applications: ApplicationRepository, profiles: ProfileRepository) -> None:
+def _generate_cv(task: Task, applications: ApplicationRepository, profiles: ProfileRepository) -> Application:
     """Lo mismo que hacía la api en el sprint 2, ahora fuera de la petición HTTP."""
     offer_text = applications.get_file(task.application_id, "offer.txt")
     if offer_text is None:
@@ -123,7 +140,9 @@ def _generate_cv(task: Task, applications: ApplicationRepository, profiles: Prof
         language=language,
         extracted=offer,
         warnings=cv.warnings,
+        match=match_skills(offer, profile),
     )
     # Mismo orden que en el sprint 2 (decisión 017): primero el fichero, el documento al final
     applications.put_file(application.id, "cv.pdf", render_pdf(cv), "application/pdf")
     applications.save(application)
+    return application

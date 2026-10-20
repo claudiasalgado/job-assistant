@@ -51,6 +51,11 @@ class ApplicationRepository:
             return None
         return Application.model_validate({**snapshot.to_dict(), "id": application_id})
 
+    def list_recent(self, limit: int = 100) -> list[Application]:
+        # Ordenar por un solo campo no necesita índice compuesto en Firestore
+        query = self._collection.order_by("created_at", direction=firestore.Query.DESCENDING).limit(limit)
+        return [Application.model_validate({**s.to_dict(), "id": s.id}) for s in query.stream()]
+
     def put_file(self, application_id: uuid.UUID, name: str, data: bytes, content_type: str) -> None:
         self._blob(application_id, name).upload_from_string(data, content_type=content_type)
 

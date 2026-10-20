@@ -32,5 +32,5 @@ gcloud run deploy worker \
   --concurrency=4 \
   --timeout=300 \
   --memory=1Gi \
-  --set-env-vars="GOOGLE_CLOUD_PROJECT=${PROJECT},GOOGLE_CLOUD_LOCATION=${REGION},GOOGLE_GENAI_USE_ENTERPRISE=true,GEMINI_MODEL=gemini-2.5-flash,GCS_BUCKET=clau-job-assistant" \
+  --set-env-vars="GOOGLE_CLOUD_PROJECT=${PROJECT},GOOGLE_CLOUD_LOCATION=${REGION},GOOGLE_GENAI_USE_ENTERPRISE=true,GEMINI_MODEL=gemini-2.5-flash,GCS_BUCKET=clau-job-assistant,EVENTS_TOPIC=application-events" \
   --quiet

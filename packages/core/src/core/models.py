@@ -210,7 +210,47 @@ class TailoredCV(BaseModel):
     warnings: list[str] = []
 
 
+# --- Matching de skills: lo que propone Gemini (borrador) ---
+
+
+class SkillCoverage(BaseModel):
+    offer_skill: str = Field(
+        description="Una skill de la oferta, copiada exactamente como aparece en su lista."
+    )
+    profile_skill: str | None = Field(
+        description=(
+            "Nombre exacto de la skill del perfil que la cubre, copiado tal cual. Solo "
+            "equivalencias reales ('GCP' y 'Google Cloud Platform'), nunca parecidas "
+            "('Java' no cubre 'JavaScript'). null si ninguna la cubre."
+        )
+    )
+
+
+class SkillMatchDraft(BaseModel):
+    """Lo único que genera Gemini en el matching. La puntuación la calcula el código."""
+
+    must_have: list[SkillCoverage] = Field(description="Una entrada por cada skill de must_have_skills.")
+    nice_to_have: list[SkillCoverage] = Field(description="Una entrada por cada skill de nice_to_have.")
+
+
+# --- Matching de skills final: borrador validado + puntuación ---
+
+
+class SkillMatch(BaseModel):
+    # 0-100: 80 % las obligatorias y 20 % las deseables (decisión 023)
+    score: int
+    # Skills de la oferta que cubre el perfil, con el nombre de la oferta
+    matched: list[str]
+    # Obligatorias que el perfil no cubre: lo que hay que preparar o explicar
+    gaps: list[str]
+    missing_nice_to_have: list[str]
+
+
 # --- Candidatura: lo que se guarda en Firestore (applications/{id}) ---
+
+ApplicationStatus = Literal[
+    "cv_ready", "applied", "screening", "interview", "offer", "rejected", "ghosted"
+]
 
 
 class Application(BaseModel):
@@ -226,6 +266,31 @@ class Application(BaseModel):
     language: str
     extracted: ExtractedOffer
     warnings: list[str]
+    # Con valor por defecto: las candidaturas anteriores al sprint 4 no los tienen
+    status: ApplicationStatus = "cv_ready"
+    match: SkillMatch | None = None
+
+
+# --- Eventos para BigQuery: lo que viaja por el topic application-events ---
+
+
+class ApplicationEvent(BaseModel):
+    """Un cambio en una candidatura. Cada campo es una columna de la tabla de BigQuery.
+
+    No lleva fecha: la subscription de BigQuery escribe la hora de publicación
+    (publish_time) junto a cada fila.
+    """
+
+    # Lo genera quien publica: Pub/Sub puede escribir la misma fila dos veces y
+    # la vista de BigQuery se queda con una por event_id
+    event_id: str
+    application_id: str
+    event_type: Literal["created", "status_changed"]
+    from_status: ApplicationStatus | None = None
+    to_status: ApplicationStatus
+    company: str | None
+    title: str
+    match_score: int | None = None
 
 
 # --- Trabajo asíncrono: lo que se guarda en Firestore (tasks/{id}) ---

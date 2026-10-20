@@ -742,3 +742,60 @@
   último error; el frontend se rinde a los 5 minutos. La configuración de
   Cloud Build pasa a ser común a los dos servicios (`infra/cloudbuild.yaml`
   con `_SERVICE`).
+
+## 023 · Matching de skills con Gemini, seguimiento por estados y eventos a BigQuery
+
+- **Fecha:** 2026-10-20
+- **Decisión:**
+  - **Matching:** Gemini (`match_skills.md`, temperatura 0) solo empareja
+    cada skill obligatoria y deseable de la oferta con un nombre de skill del
+    perfil, o con null. El código (`build_skill_match`, función pura)
+    descarta emparejamientos con nombres que no están en el perfil, cuenta
+    como no cubierta cualquier skill que Gemini se salte y calcula la
+    puntuación: 80 % obligatorias y 20 % deseables (si falta una lista, la
+    otra pesa el 100 %). Se guarda en `Application.match` con las cubiertas,
+    las obligatorias que faltan (`gaps`) y las deseables que faltan.
+  - **Seguimiento:** `Application.status` (`cv_ready`, `applied`,
+    `screening`, `interview`, `offer`, `rejected`, `ghosted`) se cambia con
+    `PATCH /applications/{id}` desde un panel en la web, que lista las
+    candidaturas con `GET /applications`.
+  - **Analítica:** cada candidatura nueva (worker) y cada cambio de estado
+    (api) publica un `ApplicationEvent` en el topic `application-events`. La
+    subscription de BigQuery `application-events-bigquery` lo escribe en la
+    tabla `job_assistant.application_events` (append-only, particionada por
+    día, `--use-table-schema` y `--write-metadata`), con DLQ a los 5
+    intentos. La vista `applications_current` quita duplicados por
+    `event_id` y se queda con el último evento de cada candidatura. Encima,
+    un informe de Looker Studio creado con la Linking API.
+- **Contexto:** el sprint 4 del plan: matching de skills, eventos a
+  BigQuery, vista de estado actual y dashboard.
+- **Alternativas descartadas:**
+  - Comparar los nombres en código: gratis y determinista, pero "GCP" no
+    coincidiría con "Google Cloud Platform", y los nombres de la oferta los
+    escribe Gemini al extraer.
+  - Que Gemini dé la puntuación directamente: no se puede comprobar, y el
+    mismo sesgo de exagerar de las decisiones 008 y 015.
+  - Hacer el matching en la misma llamada que adapta el CV: una llamada
+    menos, pero mezcla dos tareas y la del CV no usa temperatura 0.
+  - Escribir en BigQuery desde el código (cliente o Storage Write API):
+    más código y más permisos en cada servicio. Con la subscription de
+    BigQuery no hay código de ingesta.
+  - `--drop-unknown-fields`: un campo nuevo sin columna se perdería sin
+    avisar; sin él, falla y va a la DLQ.
+  - Una columna de fecha propia en el evento: `publish_time` de
+    `--write-metadata` ya es la hora del cambio.
+  - Reconstruir el histórico de las candidaturas anteriores: casi todas
+    eran pruebas con las ofertas de ejemplo, y tendrían la fecha de la
+    reconstrucción, no la real.
+- **Motivo:** el código verifica lo que se puede verificar, como en la
+  decisión 007, y la analítica no añade código de ingesta ni permisos sobre
+  BigQuery a los servicios.
+- **Consecuencia:** el matching cuesta una llamada más a Gemini Flash por
+  candidatura. Solo mira la lista de skills del perfil: algo que aparece en
+  la experiencia pero no en las skills cuenta como gap. Si el worker no
+  puede publicar el evento `created`, lo registra en el log y sigue, sin
+  reintentar el task. En cambio, el `PATCH` falla si no puede publicar el
+  suyo. El histórico en BigQuery empieza en el sprint 4. Hay un evento de
+  prueba de una candidatura de ejemplo (Nubelia Analytics). Probado en la
+  nube: oferta 2 con encaje 53 (gaps: Kubernetes y Terraform); `created` y
+  `status_changed` llegaron a BigQuery en unos 2 s.

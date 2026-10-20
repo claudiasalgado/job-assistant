@@ -32,5 +32,5 @@ gcloud run deploy api \
   --iap \
   --max-instances=2 \
   --memory=512Mi \
-  --set-env-vars="GOOGLE_CLOUD_PROJECT=${PROJECT},GCS_BUCKET=clau-job-assistant,TASKS_TOPIC=cv-tasks" \
+  --set-env-vars="GOOGLE_CLOUD_PROJECT=${PROJECT},GCS_BUCKET=clau-job-assistant,TASKS_TOPIC=cv-tasks,EVENTS_TOPIC=application-events" \
   --quiet

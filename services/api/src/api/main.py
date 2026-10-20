@@ -11,7 +11,8 @@ from functools import cache
 from pathlib import Path
 from typing import Annotated
 
-from core.models import Application, Task, TaskMessage
+from core.events import EventPublisher
+from core.models import Application, ApplicationStatus, Task, TaskMessage
 from core.repository import ApplicationRepository, ProfileRepository, TaskRepository
 from fastapi import Depends, FastAPI, HTTPException, Response
 from fastapi.responses import FileResponse
@@ -69,10 +70,16 @@ def get_queue() -> TaskQueue:
     return TaskQueue()
 
 
+@cache
+def get_events() -> EventPublisher:
+    return EventPublisher()
+
+
 Repository = Annotated[ApplicationRepository, Depends(get_repository)]
 Profiles = Annotated[ProfileRepository, Depends(get_profiles)]
 Tasks = Annotated[TaskRepository, Depends(get_tasks)]
 Queue = Annotated[TaskQueue, Depends(get_queue)]
+Events = Annotated[EventPublisher, Depends(get_events)]
 
 
 class ApplicationCreate(BaseModel):
@@ -141,6 +148,33 @@ def get_task(task_id: uuid.UUID, tasks: Tasks) -> Task:
     if task is None:
         raise HTTPException(status_code=404, detail="Trabajo no encontrado")
     return task
+
+
+# El panel de seguimiento: las candidaturas más recientes primero
+@app.get("/applications")
+def list_applications(repo: Repository) -> list[ApplicationOut]:
+    return [ApplicationOut.from_application(a) for a in repo.list_recent()]
+
+
+class StatusUpdate(BaseModel):
+    status: ApplicationStatus
+
+
+@app.patch("/applications/{application_id}")
+def update_status(application_id: uuid.UUID, body: StatusUpdate, repo: Repository, events: Events) -> ApplicationOut:
+    application = repo.get(application_id)
+    if application is None:
+        raise HTTPException(status_code=404, detail="Candidatura no encontrada")
+    if application.status == body.status:
+        return ApplicationOut.from_application(application)
+
+    from_status = application.status
+    application.status = body.status
+    repo.save(application)
+    # Aquí sí falla la petición si no se publica: es la petición que cambia el estado,
+    # y sin el evento BigQuery quedaría desincronizado sin que nadie lo sepa
+    events.status_changed(application, from_status)
+    return ApplicationOut.from_application(application)
 
 
 # El id se declara como UUID: FastAPI rechaza con 422 cualquier otra cosa, así
