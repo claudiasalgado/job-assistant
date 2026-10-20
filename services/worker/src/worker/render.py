@@ -68,21 +68,66 @@ def render_html(cv: TailoredCV) -> str:
     )
 
 
-def render_pdf(cv: TailoredCV, output: Path | None = None) -> bytes:
-    """Genera el PDF con WeasyPrint, etiquetado como PDF/UA-1 para que lo lea bien un ATS.
+MAX_PAGES = 1
+PDF_VARIANT = "pdf/ua-1"
 
-    Devuelve los bytes del PDF. Si se pasa output, además lo escribe en disco
-    (lo usa el CLI; la api los sube a Cloud Storage sin pasar por disco).
-    """
+
+class CVTooLongError(ValueError):
+    """El CV no cabe en MAX_PAGES ni quitando todos los logros que se pueden quitar."""
+
+
+def _layout(cv: TailoredCV):
+    """Maqueta el CV sin escribir el PDF: el resultado sabe cuántas páginas ocupa."""
     # Import aquí y no arriba: WeasyPrint carga librerías del sistema (pango) al importarse,
     # y así render_html funciona y se puede testear aunque no estén instaladas.
     from weasyprint import HTML
 
-    # base_url: desde dónde se resuelven styles.css y las fuentes.
+    # base_url: desde dónde se resuelven styles.css y las fuentes
+    return HTML(string=render_html(cv), base_url=str(TEMPLATES_DIR)).render(pdf_variant=PDF_VARIANT)
+
+
+def fit_to_one_page(cv: TailoredCV) -> TailoredCV:
+    """Devuelve una copia del CV que cabe en una página (decisión 021).
+
+    Mientras ocupe más, quita el último logro de la última experiencia que
+    tenga más de uno: el orden es el de relevancia que dio Gemini, así que se
+    va siempre lo que menos importa para la oferta. Ninguna experiencia se
+    queda sin logros (decisión 009). Cada recorte queda en warnings.
+    """
+    # Copia profunda: quien llama conserva su CV intacto
+    cv = cv.model_copy(deep=True)
+    while len(_layout(cv).pages) > MAX_PAGES:
+        experience = next((e for e in reversed(cv.experience) if len(e.achievements) > 1), None)
+        if experience is None:
+            raise CVTooLongError(
+                f"El CV ocupa más de {MAX_PAGES} página incluso con un solo logro por "
+                "experiencia: hay que acortar el perfil"
+            )
+        removed = experience.achievements.pop()
+        cv.warnings.append(
+            f"Logro {removed.source_id} quitado para que el CV quepa en una página"
+        )
+    return cv
+
+
+def render_pdf(cv: TailoredCV, output: Path | None = None) -> bytes:
+    """Genera el PDF con WeasyPrint, etiquetado como PDF/UA-1 para que lo lea bien un ATS.
+
+    Nunca genera más de MAX_PAGES páginas: si el CV no cabe, lanza
+    CVTooLongError. Para recortarlo antes, fit_to_one_page.
+
+    Devuelve los bytes del PDF. Si se pasa output, además lo escribe en disco
+    (lo usa el CLI; la api los sube a Cloud Storage sin pasar por disco).
+    """
+    document = _layout(cv)
+    # La garantía está aquí y no en quien llama: ningún camino escribe un PDF más largo
+    if len(document.pages) > MAX_PAGES:
+        raise CVTooLongError(
+            f"El CV ocupa {len(document.pages)} páginas; usa fit_to_one_page antes de render_pdf"
+        )
+
     # Sin destino, write_pdf devuelve los bytes en vez de escribir un fichero
-    pdf = HTML(string=render_html(cv), base_url=str(TEMPLATES_DIR)).write_pdf(
-        pdf_variant="pdf/ua-1"
-    )
+    pdf = document.write_pdf(pdf_variant=PDF_VARIANT)
     if output:
         output.write_bytes(pdf)
     return pdf

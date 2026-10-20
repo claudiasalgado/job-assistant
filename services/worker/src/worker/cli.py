@@ -13,7 +13,7 @@ from pathlib import Path
 from core.models import Profile
 
 from worker.extractor import extract_offer
-from worker.render import render_pdf
+from worker.render import fit_to_one_page, render_pdf
 from worker.tailor import tailor_cv
 
 
@@ -64,7 +64,7 @@ def main() -> None:
     profile = Profile.model_validate_json(profile_path.read_text(encoding="utf-8"))
 
     print(f"Adaptando el CV ({language}) a {offer.title} en {offer.company or 'empresa sin nombre'}...")
-    cv = tailor_cv(offer, profile)
+    cv = fit_to_one_page(tailor_cv(offer, profile))
 
     args.out.mkdir(parents=True, exist_ok=True)
     output = args.out / f"cv_{_slug(offer.company or 'oferta')}_{language}.pdf"

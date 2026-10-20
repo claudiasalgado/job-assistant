@@ -649,3 +649,40 @@
   (añadir un secret nuevo al cliente, aplicarlo y borrar el antiguo). Con
   la app en modo pruebas solo entran los usuarios de prueba de la pantalla
   de consentimiento.
+
+## 021 · El CV ocupa siempre una página como máximo
+
+- **Fecha:** 2026-10-20
+- **Decisión:** `render_pdf` maqueta el CV con WeasyPrint, cuenta las
+  páginas antes de escribir el PDF y lanza `CVTooLongError` si pasan de
+  una. Antes, `fit_to_one_page` recorta: mientras no quepa, quita el último
+  logro de la última experiencia que tenga más de uno. Es el logro menos
+  relevante de la experiencia menos relevante, según el orden que da
+  Gemini. Ninguna experiencia se queda sin logros (decisión 009) y cada
+  recorte queda en `warnings`. Si ni así cabe, la api responde 422.
+- **Contexto:** uno de los cinco CV generados hasta ahora ocupaba dos
+  páginas. Gemini no sabe cuánto ocupa su texto en la plantilla, y un
+  prompt no es una garantía (decisión 007).
+- **Alternativas descartadas:**
+  - Pedir en el prompt que quepa en una página: sin garantía.
+  - Reducir el tamaño de letra y los márgenes: conserva el contenido,
+    pero empeora la lectura y también necesita un límite. Se puede añadir
+    antes del recorte si se recorta demasiado.
+  - Volver a pedírselo a Gemini indicando cuánto sobra: más coste y
+    latencia, y tampoco garantiza nada.
+  - Cortar lo que sobresale con CSS: cortaría texto a mitad de frase sin
+    avisar.
+  - Solo dar error si ocupa más: cumple el límite, pero deja sin CV.
+  - Quitar antes secciones enteras (proyectos, voluntariado): se eligió
+    recortar solo logros.
+- **Motivo:** la garantía está en `render_pdf`, así que ningún camino (api
+  o CLI) puede generar un PDF de dos páginas, aunque se olvide recortar. El
+  recorte no vuelve a llamar a Gemini, solo maqueta otra vez (milisegundos).
+- **Consecuencia:** probado con un CV forzado a 3 páginas: se recortó a una
+  (de 9 y 6 logros pasó a 3 y 1, primero en la experiencia menos
+  relevante), con un aviso por logro, y `render_pdf` rechazó la versión sin
+  recortar. Un perfil que no cabe ni con un logro por experiencia da error.
+  Al regenerar la oferta del CV de dos páginas, esta vez Gemini lo escribió
+  más corto y no hizo falta recortar: el recorte depende de cuánto escriba
+  Gemini en cada ejecución.
+
