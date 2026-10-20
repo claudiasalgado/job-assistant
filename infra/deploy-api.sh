@@ -12,16 +12,16 @@ REGION=europe-west4
 gcloud builds submit . \
   --project="$PROJECT" \
   --region="$REGION" \
-  --config=services/api/cloudbuild.yaml \
+  --config=infra/cloudbuild.yaml \
+  --substitutions=_SERVICE=api \
   --default-buckets-behavior=regional-user-owned-bucket
 
 # 2. Nueva revisión de Cloud Run con esa imagen
-
 # --no-allow-unauthenticated: solo entra quien tenga run.invoker (tú, como Owner, y el agente de IAP)
 # --iap: login con Google delante del servicio (decisión 020); el cliente OAuth se configuró a mano
 # --service-account: se ejecuta como api-runtime y no como la cuenta por defecto con Editor
 # --max-instances=2: tope de coste; un bucle de peticiones no puede escalar sin límite
-# --memory=1Gi: WeasyPrint con las fuentes cabe justo en los 512Mi por defecto
+# --memory=512Mi: desde el sprint 3 la api ya no genera PDFs (decisión 022)
 # Sin --min-instances: escala a cero y no cuesta nada mientras no se usa
 gcloud run deploy api \
   --project="$PROJECT" \
@@ -31,6 +31,6 @@ gcloud run deploy api \
   --no-allow-unauthenticated \
   --iap \
   --max-instances=2 \
-  --memory=1Gi \
-  --set-env-vars="GOOGLE_CLOUD_PROJECT=${PROJECT},GOOGLE_CLOUD_LOCATION=${REGION},GOOGLE_GENAI_USE_ENTERPRISE=true,GEMINI_MODEL=gemini-2.5-flash,GCS_BUCKET=clau-job-assistant" \
+  --memory=512Mi \
+  --set-env-vars="GOOGLE_CLOUD_PROJECT=${PROJECT},GCS_BUCKET=clau-job-assistant,TASKS_TOPIC=cv-tasks" \
   --quiet

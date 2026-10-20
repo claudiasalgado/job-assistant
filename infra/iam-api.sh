@@ -14,9 +14,8 @@ MEMBER="serviceAccount:api-runtime@${PROJECT}.iam.gserviceaccount.com"
 gcloud projects add-iam-policy-binding "$PROJECT" --member="$MEMBER" \
   --role=roles/datastore.user --condition=None --quiet --format=none
 
-# Vertex AI: llamar a Gemini
-gcloud projects add-iam-policy-binding "$PROJECT" --member="$MEMBER" \
-  --role=roles/aiplatform.user --condition=None --quiet --format=none
+# Vertex AI: desde el sprint 3 la api ya no llama a Gemini (lo hace el worker), así
+# que no tiene aiplatform.user. Publicar en cv-tasks se concede en infra/pubsub.sh
 
 # Cloud Storage: objetos de este bucket y de ningún otro
 gcloud storage buckets add-iam-policy-binding "$BUCKET" --member="$MEMBER" \

@@ -226,3 +226,35 @@ class Application(BaseModel):
     language: str
     extracted: ExtractedOffer
     warnings: list[str]
+
+
+# --- Trabajo asíncrono: lo que se guarda en Firestore (tasks/{id}) ---
+
+TaskState = Literal["queued", "running", "done", "failed"]
+
+
+class Task(BaseModel):
+    """Un trabajo que hace el worker. El frontend consulta su estado por polling.
+
+    La api crea el task y genera también el id de la candidatura que saldrá
+    de él; la oferta ya está en Cloud Storage (applications/{id}/offer.txt)
+    cuando se publica el mensaje.
+    """
+
+    id: uuid.UUID
+    application_id: uuid.UUID
+    type: Literal["generate_cv"] = "generate_cv"
+    state: TaskState = "queued"
+    # Idioma pedido para el CV; None: el de la oferta
+    language: str | None = None
+    # Cuántas veces ha empezado el worker este task (cada entrega de Pub/Sub suma una)
+    attempts: int = 0
+    error: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class TaskMessage(BaseModel):
+    """Lo que viaja en el mensaje de Pub/Sub: solo el id, el resto está en el task."""
+
+    task_id: uuid.UUID

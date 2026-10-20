@@ -686,3 +686,59 @@
   más corto y no hizo falta recortar: el recorte depende de cuánto escriba
   Gemini en cada ejecución.
 
+## 022 · api y worker separados por Pub/Sub push, con tasks idempotentes
+
+- **Fecha:** 2026-10-20
+- **Decisión:**
+  - `POST /applications` sube la oferta a GCS, crea `tasks/{id}` en
+    Firestore (`queued`), publica en el topic `cv-tasks` un `TaskMessage`
+    con solo el `task_id` y responde 202. El frontend consulta
+    `GET /tasks/{id}` cada 2 s.
+  - Un mensaje es una candidatura entera: extraer, adaptar y generar el PDF.
+  - La subscription push `cv-tasks-worker` llama a `POST /pubsub` del
+    servicio `worker`, firmando con la cuenta `pubsub-push` (solo tiene
+    `run.invoker` sobre el worker). Reintentos de 10 s a 10 min; al quinto
+    fallo, el mensaje va a `cv-tasks-dead`, que guarda 7 días la
+    subscription `cv-tasks-dead-inspect`.
+  - `TaskRepository.claim` marca el task como `running` en una transacción
+    de Firestore, solo si está `queued` o `failed`, o lleva más de 10 min
+    en `running` (lease). Si no, el worker responde 204 sin hacer nada.
+  - Errores permanentes (sin oferta, sin perfil, CV que no cabe): task
+    `failed` y 204. Transitorios: task de vuelta a `queued` con el error y
+    500, para que Pub/Sub reintente.
+  - Cada servicio tiene su identidad: `api-runtime` (Firestore, bucket,
+    publicar en `cv-tasks`; ya no tiene `aiplatform.user`) y
+    `worker-runtime` (Firestore, bucket, Vertex AI). La api ya no depende
+    del paquete `worker` ni lleva WeasyPrint. Su imagen baja de 838 a 617 MB
+    y su memoria, de 1 GiB a 512 MiB.
+- **Contexto:** en el sprint 2 la petición esperaba unos 20 s a Gemini y al
+  PDF. Si algo fallaba, se perdía el trabajo sin reintento. Pub/Sub entrega
+  *at least once*.
+- **Alternativas descartadas:**
+  - Cloud Tasks: más simple para un solo consumidor, pero un topic de
+    Pub/Sub se podrá reutilizar con varios consumidores en el sprint 4.
+  - Pull con un worker pool: sin IAM de push, pero no escala a cero.
+  - Una cadena de mensajes (extraer y luego generar): un fallo solo repite
+    su paso, pero hay el doble de estados y código. Se revisará al añadir
+    la carta.
+  - Mirar el estado sin transacción: dos entregas simultáneas procesarían
+    las dos.
+  - *Exactly-once delivery*: solo existe en subscriptions pull.
+  - Meter la oferta en el mensaje: el worker no leería Firestore al
+    empezar, pero habría datos duplicados y un reintento tardío podría
+    usar datos viejos.
+  - Heartbeat en vez de lease fijo: detecta antes una instancia muerta,
+    pero necesita un hilo extra; con trabajos de ~20 s no compensa.
+- **Motivo:** la petición HTTP responde en lo que tardan tres escrituras,
+  el trabajo caro se reintenta solo y un mensaje duplicado no genera dos CV
+  ni paga dos veces a Gemini.
+- **Consecuencia:** probado en local (10 `claim` simultáneos: solo uno
+  gana; una segunda entrega del mismo mensaje no repite nada) y en la nube
+  (POST → `running` → `done` en ~70 s). En la nube, las tres primeras
+  entregas dieron 403 porque el `run.invoker` de `pubsub-push` aún no se
+  había propagado, y Pub/Sub lo resolvió reintentando. Esos 403 no cuentan
+  en `attempts` del task, pero sí en los 5 intentos de Pub/Sub antes de la
+  DLQ. Un task cuyo mensaje acaba en la DLQ se queda en `queued` con su
+  último error; el frontend se rinde a los 5 minutos. La configuración de
+  Cloud Build pasa a ser común a los dos servicios (`infra/cloudbuild.yaml`
+  con `_SERVICE`).

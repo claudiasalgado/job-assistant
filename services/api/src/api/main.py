@@ -1,23 +1,22 @@
-"""API HTTP del job-assistant (sprint 2: un solo servicio, todo síncrono).
+"""API HTTP del job-assistant (sprint 3: el trabajo pesado lo hace el worker vía Pub/Sub).
 
 Uso en local:
     uv run --package api --env-file .env fastapi dev services/api/src/api/main.py
 """
 
+import os
 import uuid
 from datetime import UTC, datetime
 from functools import cache
 from pathlib import Path
 from typing import Annotated
 
-from core.models import Application, Profile
-from core.repository import ApplicationRepository, ProfileRepository
+from core.models import Application, Task, TaskMessage
+from core.repository import ApplicationRepository, ProfileRepository, TaskRepository
 from fastapi import Depends, FastAPI, HTTPException, Response
 from fastapi.responses import FileResponse
+from google.cloud import pubsub_v1
 from pydantic import BaseModel, Field
-from worker.extractor import extract_offer
-from worker.render import render_pdf
-from worker.tailor import tailor_cv
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -31,9 +30,9 @@ def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
 
 
-# Un solo repositorio por proceso, creado en la primera petición y no al
-# importar: así importar el módulo no exige credenciales, y en los tests se
-# sustituye con app.dependency_overrides[get_repository]
+# Un solo cliente por proceso, creado en la primera petición y no al importar:
+# así importar el módulo no exige credenciales, y en los tests se sustituyen
+# con app.dependency_overrides
 @cache
 def get_repository() -> ApplicationRepository:
     return ApplicationRepository()
@@ -44,8 +43,36 @@ def get_profiles() -> ProfileRepository:
     return ProfileRepository()
 
 
+@cache
+def get_tasks() -> TaskRepository:
+    return TaskRepository()
+
+
+class TaskQueue:
+    """Publica los trabajos en el topic de Pub/Sub del que lee el worker."""
+
+    def __init__(self):
+        topic = os.environ.get("TASKS_TOPIC")
+        if not topic:
+            raise RuntimeError("Falta la variable de entorno TASKS_TOPIC (ver .env.example)")
+        self._publisher = pubsub_v1.PublisherClient()
+        self._topic = self._publisher.topic_path(os.environ["GOOGLE_CLOUD_PROJECT"], topic)
+
+    def publish(self, message: TaskMessage) -> None:
+        # publish es asíncrono y devuelve un future; result() espera a que Pub/Sub
+        # confirme que lo ha guardado, y si no lo confirma lanza la excepción aquí
+        self._publisher.publish(self._topic, message.model_dump_json().encode()).result(timeout=30)
+
+
+@cache
+def get_queue() -> TaskQueue:
+    return TaskQueue()
+
+
 Repository = Annotated[ApplicationRepository, Depends(get_repository)]
 Profiles = Annotated[ProfileRepository, Depends(get_profiles)]
+Tasks = Annotated[TaskRepository, Depends(get_tasks)]
+Queue = Annotated[TaskQueue, Depends(get_queue)]
 
 
 class ApplicationCreate(BaseModel):
@@ -69,48 +96,51 @@ class ApplicationOut(Application):
         )
 
 
-def _load_profile(language: str, profiles: ProfileRepository) -> Profile:
-    profile = profiles.get(language)
-    if profile is None:
+# 202 Accepted: la petición se ha aceptado pero el trabajo no está hecho todavía.
+# Responde en lo que tardan tres escrituras, sin esperar a Gemini ni al PDF
+@app.post("/applications", status_code=202)
+def create_application(
+    body: ApplicationCreate, repo: Repository, profiles: Profiles, tasks: Tasks, queue: Queue
+) -> Task:
+    # Si el idioma ya se conoce, se comprueba antes de encolar: un error gratis e inmediato
+    if body.language and profiles.get(body.language) is None:
         available = profiles.languages()
         raise HTTPException(
             status_code=422,
-            detail=f"No hay perfil en '{language}'. Disponibles: {', '.join(available) or 'ninguno'}",
+            detail=f"No hay perfil en '{body.language}'. Disponibles: {', '.join(available) or 'ninguno'}",
         )
-    return profile
 
-
-# Con def y no async def: Gemini, WeasyPrint, Firestore y GCS bloquean, y FastAPI
-# ejecuta las funciones def en un hilo aparte para no congelar el resto de peticiones
-@app.post("/applications", status_code=201)
-def create_application(body: ApplicationCreate, repo: Repository, profiles: Profiles) -> ApplicationOut:
-    # Si el idioma ya se conoce, se comprueba antes de llamar a Gemini: un error gratis
-    if body.language:
-        _load_profile(body.language, profiles)
-
-    offer = extract_offer(body.offer_text)
-    language = body.language or offer.language
-    profile = _load_profile(language, profiles)
-    cv = tailor_cv(offer, profile)
-
-    # El id lo genera la api, no el almacenamiento: es lo que hará idempotente
-    # el worker en el sprint 3
-    application = Application(
+    # Los dos ids los genera la api: el task_id es lo que hace idempotente al worker
+    now = datetime.now(UTC)
+    task = Task(
         id=uuid.uuid4(),
-        created_at=datetime.now(UTC),
-        language=language,
-        extracted=offer,
-        warnings=cv.warnings,
+        application_id=uuid.uuid4(),
+        language=body.language,
+        created_at=now,
+        updated_at=now,
     )
 
-    # Primero los ficheros y el documento al final: si algo falla a medias
-    # quedan ficheros huérfanos en GCS, nunca un documento que apunta a un PDF
-    # que no existe
-    repo.put_file(application.id, "offer.txt", body.offer_text.encode(), "text/plain; charset=utf-8")
-    repo.put_file(application.id, "cv.pdf", render_pdf(cv), "application/pdf")
-    repo.save(application)
+    # Primero la oferta y el task, el mensaje al final: cuando el worker lo
+    # reciba, todo lo que necesita ya existe
+    repo.put_file(task.application_id, "offer.txt", body.offer_text.encode(), "text/plain; charset=utf-8")
+    tasks.create(task)
+    try:
+        queue.publish(TaskMessage(task_id=task.id))
+    except Exception as error:
+        # Sin mensaje nadie lo procesaría: se marca como fallido en vez de dejarlo en queued para siempre
+        tasks.fail(task.id, f"No se pudo encolar: {type(error).__name__}")
+        raise HTTPException(status_code=503, detail="No se pudo encolar el trabajo, prueba de nuevo") from error
 
-    return ApplicationOut.from_application(application)
+    return task
+
+
+# El frontend pregunta aquí cada pocos segundos hasta que el task acaba (polling)
+@app.get("/tasks/{task_id}")
+def get_task(task_id: uuid.UUID, tasks: Tasks) -> Task:
+    task = tasks.get(task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail="Trabajo no encontrado")
+    return task
 
 
 # El id se declara como UUID: FastAPI rechaza con 422 cualquier otra cosa, así

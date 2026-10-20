@@ -64,8 +64,9 @@
       $("status").textContent = "Generando… (unos 20 segundos)";
 
       try {
-        // Ruta relativa: misma URL que la página, así no hay CORS y viaja la cookie de IAP
-        const response = await fetch("applications", {
+        // Ruta relativa: misma URL que la página, así no hay CORS y viaja la cookie de IAP.
+        // La api responde 202 al momento con un task; el trabajo lo hace el worker
+        const task = await request("applications", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -73,9 +74,8 @@
             language: $("language").value || null,
           }),
         });
-        const data = await response.json();
-        if (!response.ok) throw new Error(formatError(data.detail));
-        showResult(data);
+        const done = await waitForTask(task.id);
+        showResult(await request(`applications/${done.application_id}`));
         $("status").textContent = "";
       } catch (error) {
         $("status").textContent = `Error: ${error.message}`;
@@ -83,6 +83,32 @@
         $("submit").disabled = false;
       }
     });
+
+    async function request(url, options) {
+      const response = await fetch(url, options);
+      const data = await response.json();
+      if (!response.ok) throw new Error(formatError(data.detail));
+      return data;
+    }
+
+    const STATE_LABELS = { queued: "En cola…", running: "Generando… (unos 20 segundos)" };
+
+    // Polling: pregunta por el task cada 2 s hasta que acaba. failed es definitivo;
+    // queued con error es un fallo que Pub/Sub va a reintentar, así que se sigue esperando
+    async function waitForTask(taskId) {
+      const deadline = Date.now() + 5 * 60 * 1000;
+      while (Date.now() < deadline) {
+        const task = await request(`tasks/${taskId}`);
+        if (task.state === "done") return task;
+        if (task.state === "failed") throw new Error(task.error);
+        $("status").textContent = task.state === "queued" && task.error
+          ? `Ha fallado el intento ${task.attempts} (${task.error}). Reintentando…`
+          : STATE_LABELS[task.state];
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+      const task = await request(`tasks/${taskId}`);
+      throw new Error(task.error ?? "el trabajo no ha terminado en 5 minutos");
+    }
 
     function showResult(app) {
       const offer = app.extracted;

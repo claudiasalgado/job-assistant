@@ -1,14 +1,8 @@
-# Imagen del servicio api (sprint 2: incluye worker como librería, decisión 016).
-# El build context es la raíz del repo, porque core y worker están fuera de esta carpeta:
+# Imagen del servicio api. Desde el sprint 3 no lleva WeasyPrint ni Gemini: eso es del worker.
+# El build context es la raíz del repo, porque core está fuera de esta carpeta:
 #   docker build -f services/api/Dockerfile -t api .
 
 FROM python:3.12-slim-bookworm
-
-# Librerías de sistema que WeasyPrint carga al generar el PDF (pango y harfbuzz).
-# --no-install-recommends evita ~200 MB de paquetes sugeridos que no hacen falta
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0 \
-    && rm -rf /var/lib/apt/lists/*
 
 # uv copiado de su imagen oficial, con la misma versión que en local
 COPY --from=ghcr.io/astral-sh/uv:0.13.1 /uv /bin/uv
@@ -26,13 +20,11 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 COPY packages/core/pyproject.toml packages/core/
 COPY services/api/pyproject.toml services/api/
-COPY services/worker/pyproject.toml services/worker/
 RUN uv sync --frozen --no-dev --package api --no-install-workspace
 
 # Después el código, copiado carpeta a carpeta y nunca con "COPY . .": así no
 # pueden colarse data/private ni el .env aunque falle el .dockerignore
 COPY packages/core packages/core
-COPY services/worker services/worker
 COPY services/api services/api
 RUN uv sync --frozen --no-dev --package api --no-editable
 
