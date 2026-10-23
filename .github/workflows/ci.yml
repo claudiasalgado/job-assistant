@@ -23,7 +23,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0
 
       # Misma versión de uv que en local y en los Dockerfiles; Python sale de .python-version
-      - uses: astral-sh/setup-uv@v10
+      # setup-uv no publica etiquetas de versión mayor (v10), solo la versión completa
+      - uses: astral-sh/setup-uv@v10.3.2
         with:
           version: "0.13.1"
           enable-cache: true
