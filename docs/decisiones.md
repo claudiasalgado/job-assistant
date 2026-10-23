@@ -841,3 +841,53 @@
   funciones sin parámetros (`returns` en `conftest.py`). En el repo, el
   email de la persona ya no se escribe en `infra/iam-api.sh`: se lee de la
   cuenta activa de gcloud.
+
+## 025 · Despliegue desde GitHub Actions con Workload Identity Federation
+
+- **Fecha:** 2026-10-23
+- **Decisión:**
+  - El CI despliega api y worker en cada push a `main` en el que pasan los
+    tests: un job por servicio, en paralelo, que construye la imagen en
+    Cloud Build con el hash del commit como tag y cambia la imagen con
+    `gcloud run services update --image`.
+  - GitHub se autentica con Workload Identity Federation (`infra/wif.sh`):
+    pool `github`, proveedor OIDC `github-actions` que solo acepta tokens
+    del repo por su ID numérico y de `refs/heads/main`, y la cuenta
+    `github-deployer` que el CI toma prestada durante una hora.
+  - `github-deployer` solo lanza builds, usa el bucket de fuentes de Cloud
+    Build y tiene `run.developer` sobre los dos servicios, más actuar como
+    `api-runtime`, `worker-runtime` y `ci-build`.
+  - Los builds del CI corren como `ci-build`, que solo escribe en el
+    registro `job-assistant`, lee el bucket de fuentes y escribe logs.
+    `infra/cloudbuild.yaml` gana `_TAG` (por defecto `latest`) y
+    `logging: CLOUD_LOGGING_ONLY`.
+- **Contexto:** el sprint 5 pide despliegue desde el CI con Workload
+  Identity Federation. Hasta ahora se desplegaba a mano con
+  `infra/deploy-*.sh`.
+- **Alternativas descartadas:**
+  - Clave JSON de una service account en GitHub Secrets: lo más rápido,
+    pero la clave no caduca y, si se filtra, da acceso permanente.
+  - Triggers de Cloud Build conectados a GitHub: el despliegue lo haría
+    GCP, pero quedarían dos sitios de CI y el despliegue no se vería junto
+    a los tests.
+  - Builds con la cuenta por defecto de Compute: menos pasos, pero tiene
+    Editor y el CI podría tocar todo el proyecto.
+  - `gcloud run deploy` con todos los flags en el workflow: duplica la
+    configuración de `infra/deploy-*.sh` y cambiar el acceso al servicio
+    exige `run.admin`.
+  - Build en el runner de GitHub con `docker build`: evita Cloud Build,
+    pero da escritura en Artifact Registry a una identidad de fuera y
+    pierde la caché.
+  - Desplegar solo el servicio cuyos ficheros cambian (`paths`): ahorra
+    builds, pero un cambio en `packages/core` afecta a los dos y es fácil
+    dejarse uno.
+- **Motivo:** credenciales que caducan solas y permisos mínimos: aunque
+  alguien cambie el workflow, no puede abrir la api a internet ni tocar
+  otros recursos del proyecto.
+- **Consecuencia:** la configuración de los servicios (memoria, IAP,
+  variables) sigue cambiándose a mano con `infra/deploy-*.sh`; el CI solo
+  cambia la imagen. El CI espera al build con `--suppress-logs`, porque
+  leer sus logs pediría `logging.viewer` en todo el proyecto; los logs se
+  ven en la consola. Una service account recién creada tarda unos
+  segundos en poder recibir roles en el proyecto, por eso `ensure_sa`
+  espera 30 s después de crearla.
