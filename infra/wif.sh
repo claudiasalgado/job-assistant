@@ -67,6 +67,11 @@ gcloud iam service-accounts add-iam-policy-binding "$DEPLOYER" --project="$PROJE
 # Lanzar builds
 gcloud projects add-iam-policy-binding "$PROJECT" --member="serviceAccount:$DEPLOYER" \
   --role=roles/cloudbuild.builds.editor --condition=None --quiet --format=none
+# Listar los buckets del proyecto: gcloud builds submit comprueba que el bucket de fuentes
+# es de este proyecto y no uno con el mismo nombre en otro. bucketViewer ve los buckets,
+# no los ficheros que contienen
+gcloud projects add-iam-policy-binding "$PROJECT" --member="serviceAccount:$DEPLOYER" \
+  --role=roles/storage.bucketViewer --condition=None --quiet --format=none
 # gcloud builds submit comprueba que el bucket de fuentes existe y sube el código ahí
 gcloud storage buckets add-iam-policy-binding "$SOURCE_BUCKET" --member="serviceAccount:$DEPLOYER" \
   --role=roles/storage.admin --quiet --format=none
@@ -74,6 +79,11 @@ gcloud storage buckets add-iam-policy-binding "$SOURCE_BUCKET" --member="service
 gcloud iam service-accounts add-iam-policy-binding "ci-build@${PROJECT}.iam.gserviceaccount.com" \
   --project="$PROJECT" --member="serviceAccount:$DEPLOYER" \
   --role=roles/iam.serviceAccountUser --quiet --format=none
+
+# Leer las imágenes: Cloud Run comprueba que quien despliega puede ver la imagen que pide
+gcloud artifacts repositories add-iam-policy-binding job-assistant \
+  --project="$PROJECT" --location="$REGION" --member="serviceAccount:$DEPLOYER" \
+  --role=roles/artifactregistry.reader --quiet --format=none
 
 # Cambiar la imagen de los dos servicios, y nada más: run.developer no puede tocar
 # quién tiene acceso (eso exige run.admin), así que el CI no puede abrir la api a internet

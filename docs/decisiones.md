@@ -855,8 +855,9 @@
     del repo por su ID numérico y de `refs/heads/main`, y la cuenta
     `github-deployer` que el CI toma prestada durante una hora.
   - `github-deployer` solo lanza builds, usa el bucket de fuentes de Cloud
-    Build y tiene `run.developer` sobre los dos servicios, más actuar como
-    `api-runtime`, `worker-runtime` y `ci-build`.
+    Build, ve los buckets del proyecto (`storage.bucketViewer`), lee las
+    imágenes del registro y tiene `run.developer` sobre los dos servicios,
+    más actuar como `api-runtime`, `worker-runtime` y `ci-build`.
   - Los builds del CI corren como `ci-build`, que solo escribe en el
     registro `job-assistant`, lee el bucket de fuentes y escribe logs.
     `infra/cloudbuild.yaml` gana `_TAG` (por defecto `latest`) y
@@ -890,4 +891,9 @@
   leer sus logs pediría `logging.viewer` en todo el proyecto; los logs se
   ven en la consola. Una service account recién creada tarda unos
   segundos en poder recibir roles en el proyecto, por eso `ensure_sa`
-  espera 30 s después de crearla.
+  espera 30 s después de crearla. Dos permisos que no se ven a simple
+  vista y costaron un fallo del CI cada uno: `gcloud builds submit` lista
+  los buckets del proyecto para comprobar que el de fuentes es suyo y no
+  uno con el mismo nombre en otro proyecto (su mensaje de error habla de
+  `serviceusage.services.use`, pero no es eso), y Cloud Run exige que
+  quien despliega pueda leer la imagen en Artifact Registry.
